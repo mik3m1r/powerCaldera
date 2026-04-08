@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(dir .venv/Scripts/)",
+      "Bash(where python:*)",
+      "Bash(.venv/Scripts/python.exe -m pytest tests/ -v)",
+      "Bash(C:/Repos/powerCaldera/.venv/Scripts/python.exe -c \"print\\('test'\\)\")",
+      "Bash(py -m pytest tests/ -v)"
     ]
   }
 }

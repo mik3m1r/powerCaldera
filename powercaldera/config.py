@@ -15,6 +15,7 @@ class Config:
     api_key: str = ""
     refresh_interval: int = 30
     templates_dir: str | None = None
+    log_level: str = "INFO"
 
     @classmethod
     def load(cls, path: Path | None = None) -> Config:
@@ -28,9 +29,11 @@ class Config:
             data["api_key"] = server.get("api_key", "")
             data["refresh_interval"] = settings.get("refresh_interval", 30)
             data["templates_dir"] = settings.get("templates_dir")
+            data["log_level"] = settings.get("log_level", "INFO")
 
         data["server_url"] = os.environ.get("CALDERA_URL", data.get("server_url", cls.server_url))
         data["api_key"] = os.environ.get("CALDERA_API_KEY", data.get("api_key", ""))
+        data["log_level"] = os.environ.get("CALDERA_LOG_LEVEL", data.get("log_level", "INFO"))
         return cls(**data)
 
 

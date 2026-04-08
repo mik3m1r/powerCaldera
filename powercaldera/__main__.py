@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import argparse
-import sys
+import logging
 from pathlib import Path
 
 from .config import Config, DEFAULT_CONFIG_PATH
+from .logging import setup_logging
 from .app import PowerCalderaApp
+
+logger = logging.getLogger(__name__)
 
 
 def main() -> None:
@@ -32,6 +35,13 @@ def main() -> None:
         default=None,
         help="API key de Caldera (override)",
     )
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        default=None,
+        help="Nivel de logging (default: INFO)",
+    )
     args = parser.parse_args()
 
     config = Config.load(args.config)
@@ -39,6 +49,11 @@ def main() -> None:
         config.server_url = args.server
     if args.key:
         config.api_key = args.key
+    if args.log_level:
+        config.log_level = args.log_level
+
+    setup_logging(level=config.log_level)
+    logger.info("powerCaldera v0.1.0 — server=%s", config.server_url)
 
     app = PowerCalderaApp(config=config)
     app.run()

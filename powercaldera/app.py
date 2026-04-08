@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 import time
 from dataclasses import dataclass, field
+
+logger = logging.getLogger(__name__)
 
 from textual.app import App
 from textual.binding import Binding
@@ -79,9 +82,11 @@ class PowerCalderaApp(App):
     async def get_abilities(self, force: bool = False) -> list[Ability]:
         """Retorna habilidades desde cache o API."""
         if not force and self.abilities_cache.is_valid:
+            logger.debug("Abilities cache hit (%d items)", len(self.abilities_cache.abilities))
             return self.abilities_cache.abilities
         abilities = await self.client.list_abilities()
         self.abilities_cache.update(abilities)
+        logger.debug("Abilities fetched from API: %d items", len(abilities))
         return abilities
 
     def invalidate_cache(self) -> None:
@@ -93,10 +98,14 @@ class PowerCalderaApp(App):
         try:
             connected = await self.client.health_check()
             if connected:
+                logger.info("Conectado a Caldera en %s", self.config.server_url)
                 await self.get_abilities()
+            else:
+                logger.warning("Sin conexión a Caldera en %s al iniciar", self.config.server_url)
         except Exception:
-            pass
+            logger.warning("Error al intentar conectar a Caldera al iniciar", exc_info=True)
 
     async def action_quit(self) -> None:
+        logger.info("Cerrando powerCaldera")
         await self.client.close()
         self.exit()

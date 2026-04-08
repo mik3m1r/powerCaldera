@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import logging
+
 from textual.app import ComposeResult
+
+logger = logging.getLogger(__name__)
 from textual.screen import Screen
 from textual.widgets import DataTable, Static, Footer
 
@@ -78,6 +82,7 @@ class DashboardScreen(Screen):
                 )
 
         except Exception as e:
+            logger.error("Error cargando dashboard: %s", e, exc_info=True)
             status_bar.set_status(connected=False, server_url=self.app.config.server_url)
             self.notify(f"Error de conexión: {e}", severity="error")
 

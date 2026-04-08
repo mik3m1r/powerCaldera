@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 from pydantic import ValidationError
 
@@ -52,7 +55,8 @@ class TemplateLoader:
                 try:
                     tpl = self.load_from_file(f)
                     results.append((f.name, tpl))
-                except (json.JSONDecodeError, ValidationError):
+                except (json.JSONDecodeError, ValidationError) as e:
+                    logger.warning("Skipping invalid template %s: %s", f.name, e)
                     continue
         return results
 
@@ -95,6 +99,7 @@ class TemplateLoader:
         """
         ability_ids: list[str] = []
         created_ids: list[str] = []
+        logger.info("Deploying template '%s' (%d abilities)", template.name, len(template.abilities))
 
         try:
             for ability in template.abilities:
@@ -123,10 +128,10 @@ class TemplateLoader:
             return adversary, created_ids
 
         except Exception:
-            # Rollback: eliminar abilities ya creadas
+            logger.error("Deploy failed for '%s', rolling back %d abilities", template.name, len(created_ids), exc_info=True)
             for aid in created_ids:
                 try:
                     await client.delete_ability(aid)
                 except Exception:
-                    pass
+                    logger.warning("Rollback: failed to delete ability %s", aid)
             raise

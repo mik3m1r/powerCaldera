@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import base64
+import logging
+
+logger = logging.getLogger(__name__)
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
@@ -104,9 +107,11 @@ class CreateOperationModal(ModalScreen[bool]):
                 group=self.query_one("#op-group", Input).value.strip(),
             )
             await self.app.client.create_operation(req)
+            logger.info("Operación '%s' creada desde modal", name)
             self.notify(f"Operación '{name}' creada", severity="information")
             self.dismiss(True)
         except Exception as e:
+            logger.error("Error creando operación: %s", e, exc_info=True)
             self.notify(f"Error: {e}", severity="error")
 
 
@@ -160,6 +165,7 @@ class OperationsScreen(Screen):
     async def _load_data(self) -> None:
         connected = await self.app.client.health_check()
         if not connected:
+            logger.warning("OperationsScreen: sin conexión a Caldera")
             self.notify(
                 "Sin conexión con Caldera. Verifica URL y API key ([r] para reintentar).",
                 severity="warning",
@@ -173,10 +179,12 @@ class OperationsScreen(Screen):
             try:
                 self._planners = await client.list_planners()
             except Exception:
+                logger.debug("No se pudieron cargar planners", exc_info=True)
                 self._planners = []
             try:
                 self._sources = await client.list_sources()
             except Exception:
+                logger.debug("No se pudieron cargar sources", exc_info=True)
                 self._sources = []
 
             table = self.query_one("#ops-table", DataTable)
@@ -191,6 +199,7 @@ class OperationsScreen(Screen):
                     op.start[:19] if op.start else "-",
                 )
         except Exception as e:
+            logger.error("Error al cargar operaciones: %s", e, exc_info=True)
             self.notify(f"Error al cargar operaciones: {e}", severity="error")
 
     def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
@@ -233,8 +242,10 @@ class OperationsScreen(Screen):
                         decoded = base64.b64decode(link.output).decode("utf-8", errors="replace")
                         log.write(f"  [dim]{decoded[:200]}[/]")
                     except Exception:
+                        logger.debug("Error decodificando output base64 del link", exc_info=True)
                         log.write(f"  [dim]{link.output[:200]}[/]")
         except Exception as e:
+            logger.error("Error cargando links de operación %s: %s", op_id[:8], e, exc_info=True)
             log = self.query_one("#op-links-log", RichLog)
             log.clear()
             log.write(f"[red]Error cargando links: {e}[/]")
@@ -257,9 +268,11 @@ class OperationsScreen(Screen):
             return
         try:
             await self.app.client.update_operation_state(self._selected_op.id, state)
+            logger.info("Operación %s estado → '%s'", self._selected_op.id[:8], state)
             self.notify(f"Estado cambiado a '{state}'", severity="information")
             self.load_data()
         except Exception as e:
+            logger.error("Error cambiando estado de operación: %s", e, exc_info=True)
             self.notify(f"Error: {e}", severity="error")
 
     async def _generate_report(self) -> None:
@@ -280,6 +293,7 @@ class OperationsScreen(Screen):
                     log.write(f"  {status}: {ab_name}")
             self.notify("Reporte generado", severity="information")
         except Exception as e:
+            logger.error("Error generando reporte: %s", e, exc_info=True)
             self.notify(f"Error: {e}", severity="error")
 
     def action_refresh(self) -> None:

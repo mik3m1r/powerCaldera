@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
+
+logger = logging.getLogger(__name__)
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
@@ -87,9 +90,11 @@ class CreateAdversaryModal(ModalScreen[bool]):
                 tags=tags,
             )
             await self.app.client.create_adversary(req)
+            logger.info("Adversario '%s' creado desde modal", name)
             self.notify(f"Adversario '{name}' creado", severity="information")
             self.dismiss(True)
         except Exception as e:
+            logger.error("Error creando adversario: %s", e, exc_info=True)
             self.notify(f"Error: {e}", severity="error")
 
 
@@ -127,6 +132,7 @@ class AdversariesScreen(Screen):
     async def _load_data(self) -> None:
         connected = await self.app.client.health_check()
         if not connected:
+            logger.warning("AdversariesScreen: sin conexión a Caldera")
             self.notify(
                 "Sin conexión con Caldera. Verifica URL y API key ([r] para reintentar).",
                 severity="warning",
@@ -139,6 +145,7 @@ class AdversariesScreen(Screen):
             self._ability_map = self.app.abilities_cache.ability_map
             self._render_table()
         except Exception as e:
+            logger.error("Error al cargar adversarios: %s", e, exc_info=True)
             self.notify(f"Error al cargar adversarios: {e}", severity="error")
 
     def _render_table(self) -> None:

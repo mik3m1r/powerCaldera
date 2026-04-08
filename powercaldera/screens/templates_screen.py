@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
@@ -172,6 +175,7 @@ class TemplatesScreen(Screen):
             self._show_import_preview(tpl)
             log.write(f"[green]\u2713 Archivo cargado: {path.name}[/]\n")
         except Exception as e:
+            logger.error("Error cargando archivo de plantilla '%s': %s", path_str, e, exc_info=True)
             self._imported_template = None
             log.write(f"[red]Error: {e}[/]")
 
@@ -198,11 +202,13 @@ class TemplatesScreen(Screen):
                 tpl, self.app.client
             )
             self.app.invalidate_cache()
+            logger.info("Plantilla '%s' desplegada: adversario '%s' con %d habilidades", tpl.name, adversary.name, len(ability_ids))
             self.notify(
                 f"Adversario '{adversary.name}' creado con {len(ability_ids)} habilidades",
                 severity="information",
             )
         except Exception as e:
+            logger.error("Error al desplegar plantilla '%s': %s", tpl.name, e, exc_info=True)
             self.notify(f"Error al desplegar: {e}", severity="error")
 
     def action_refresh(self) -> None:

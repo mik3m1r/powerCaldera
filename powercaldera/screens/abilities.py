@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
+
+logger = logging.getLogger(__name__)
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
@@ -120,9 +123,11 @@ class CreateAbilityModal(ModalScreen[bool]):
             )
             await self.app.client.create_ability(req)
             self.app.invalidate_cache()
+            logger.info("Habilidad '%s' creada desde modal", name)
             self.notify(f"Habilidad '{name}' creada", severity="information")
             self.dismiss(True)
         except Exception as e:
+            logger.error("Error creando habilidad: %s", e, exc_info=True)
             self.notify(f"Error: {e}", severity="error")
 
 
@@ -162,6 +167,7 @@ class AbilitiesScreen(Screen):
     async def _load_data(self) -> None:
         connected = await self.app.client.health_check()
         if not connected:
+            logger.warning("AbilitiesScreen: sin conexión a Caldera")
             self.notify(
                 "Sin conexión con Caldera. Verifica URL y API key ([r] para reintentar).",
                 severity="warning",
@@ -172,6 +178,7 @@ class AbilitiesScreen(Screen):
             self._abilities = await self.app.get_abilities()
             self._render_table(self._abilities)
         except Exception as e:
+            logger.error("Error al cargar habilidades: %s", e, exc_info=True)
             self.notify(f"Error al cargar habilidades: {e}", severity="error")
 
     def _render_table(self, abilities: list[Ability]) -> None:
