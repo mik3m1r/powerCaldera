@@ -58,6 +58,12 @@ def main() -> None:
     if args.log_level:
         config.log_level = args.log_level
 
+    try:
+        config._validate()
+    except ValueError as e:
+        print(f"[powerCaldera] Invalid configuration: {e}", file=sys.stderr)
+        sys.exit(1)
+
     setup_logging(level=config.log_level)
     logger.info("powerCaldera v0.1.0 — server=%s", config.server_url)
 
