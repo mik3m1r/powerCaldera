@@ -5,18 +5,21 @@ from __future__ import annotations
 import logging
 import uuid
 
-logger = logging.getLogger(__name__)
-
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.markup import escape
-from textual.screen import Screen, ModalScreen
+from textual.screen import ModalScreen
 from textual.widgets import (
     DataTable, Footer, Input, Static, Button, SelectionList,
 )
+
 from ..api.models import Ability, Adversary, CreateAdversaryRequest
+from ..utils import truncate
 from ..widgets.header_bar import HeaderBar
 from ..widgets.status_bar import StatusBar
+from .base import BaseScreen
+
+logger = logging.getLogger(__name__)
 
 
 class CreateAdversaryModal(ModalScreen[bool]):
@@ -99,7 +102,7 @@ class CreateAdversaryModal(ModalScreen[bool]):
             self.notify(f"Error: {escape(str(e))}", severity="error")
 
 
-class AdversariesScreen(Screen):
+class AdversariesScreen(BaseScreen):
 
     BINDINGS = [
         ("r", "refresh", "Refrescar"),
@@ -127,19 +130,9 @@ class AdversariesScreen(Screen):
         table.cursor_type = "row"
         self.load_data()
 
-    def load_data(self) -> None:
-        self.run_worker(self._load_data(), exclusive=True)
-
     async def _load_data(self) -> None:
         try:
-            connected = await self.app.client.health_check()
-            if not connected:
-                logger.warning("AdversariesScreen: sin conexión a Caldera")
-                self.notify(
-                    "Sin conexión con Caldera. Verifica URL y API key ([r] para reintentar).",
-                    severity="warning",
-                    timeout=8,
-                )
+            if not await self._check_connection():
                 return
             self._adversaries = await self.app.client.list_adversaries()
             self._abilities = await self.app.get_abilities()
@@ -156,7 +149,7 @@ class AdversariesScreen(Screen):
             tags = ", ".join(adv.tags[:3]) if adv.tags else "-"
             table.add_row(
                 adv.adversary_id[:12],
-                adv.name[:35],
+                truncate(adv.name, 35),
                 str(len(adv.atomic_ordering)),
                 tags,
             )

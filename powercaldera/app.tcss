@@ -104,9 +104,17 @@ Button.success {
     color: white;
 }
 
+Button.success:hover {
+    background: #278f3e;
+}
+
 Button.danger {
     background: #8b0000;
     color: white;
+}
+
+Button.danger:hover {
+    background: #a50000;
 }
 
 /* Modal screens */

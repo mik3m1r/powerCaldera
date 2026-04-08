@@ -65,7 +65,19 @@ class Config:
         data["server_url"] = os.environ.get("CALDERA_URL", data.get("server_url", cls.server_url))
         data["api_key"] = os.environ.get("CALDERA_API_KEY", data.get("api_key", ""))
         data["log_level"] = os.environ.get("CALDERA_LOG_LEVEL", data.get("log_level", "INFO"))
-        return cls(**data)
+
+        config = cls(**data)
+        config._validate()
+        return config
+
+    def _validate(self) -> None:
+        """Valida la configuración cargada."""
+        if not self.api_key:
+            logger.warning("No API key configured — connections to Caldera will likely fail")
+        if not self.server_url.startswith(("http://", "https://")):
+            raise ValueError(
+                f"server_url debe empezar con http:// o https://: {self.server_url}"
+            )
 
 
 DEFAULT_CONFIG_PATH = Path.home() / ".powercaldera" / "config.yaml"

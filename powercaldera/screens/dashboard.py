@@ -6,16 +6,16 @@ import logging
 
 from textual.app import ComposeResult
 from textual.markup import escape
-
-logger = logging.getLogger(__name__)
-from textual.screen import Screen
 from textual.widgets import DataTable, Static, Footer
 
 from ..widgets.header_bar import HeaderBar
 from ..widgets.status_bar import StatusBar
+from .base import BaseScreen
+
+logger = logging.getLogger(__name__)
 
 
-class DashboardScreen(Screen):
+class DashboardScreen(BaseScreen):
 
     BINDINGS = [("r", "refresh", "Refrescar")]
 
@@ -37,9 +37,6 @@ class DashboardScreen(Screen):
         ops_table.add_columns("ID", "Nombre", "Estado", "Adversario", "Inicio", "Fin")
 
         self.load_data()
-
-    def load_data(self) -> None:
-        self.run_worker(self._load_data(), exclusive=True)
 
     async def _load_data(self) -> None:
         try:

@@ -6,8 +6,6 @@ import logging
 import time
 from dataclasses import dataclass, field
 
-logger = logging.getLogger(__name__)
-
 from textual.app import App
 from textual.binding import Binding
 
@@ -19,6 +17,8 @@ from .screens.abilities import AbilitiesScreen
 from .screens.adversaries import AdversariesScreen
 from .screens.operations import OperationsScreen
 from .screens.templates_screen import TemplatesScreen
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass

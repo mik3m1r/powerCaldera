@@ -5,20 +5,22 @@ from __future__ import annotations
 import logging
 import uuid
 
-logger = logging.getLogger(__name__)
-
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.markup import escape
-from textual.screen import Screen, ModalScreen
+from textual.screen import ModalScreen
 from textual.timer import Timer
 from textual.widgets import (
     DataTable, Footer, Input, Static, Button, TextArea, Select,
 )
 
 from ..api.models import Ability, CreateAbilityRequest
+from ..utils import truncate
 from ..widgets.header_bar import HeaderBar
 from ..widgets.status_bar import StatusBar
+from .base import BaseScreen
+
+logger = logging.getLogger(__name__)
 
 MAX_ROWS = 200
 SEARCH_DEBOUNCE_S = 0.3
@@ -132,7 +134,7 @@ class CreateAbilityModal(ModalScreen[bool]):
             self.notify(f"Error: {escape(str(e))}", severity="error")
 
 
-class AbilitiesScreen(Screen):
+class AbilitiesScreen(BaseScreen):
 
     BINDINGS = [
         ("r", "refresh", "Refrescar"),
@@ -162,19 +164,9 @@ class AbilitiesScreen(Screen):
         table.cursor_type = "row"
         self.load_data()
 
-    def load_data(self) -> None:
-        self.run_worker(self._load_data(), exclusive=True)
-
     async def _load_data(self) -> None:
         try:
-            connected = await self.app.client.health_check()
-            if not connected:
-                logger.warning("AbilitiesScreen: sin conexión a Caldera")
-                self.notify(
-                    "Sin conexión con Caldera. Verifica URL y API key ([r] para reintentar).",
-                    severity="warning",
-                    timeout=8,
-                )
+            if not await self._check_connection():
                 return
             self._abilities = await self.app.get_abilities()
             self._render_table(self._abilities)
@@ -190,7 +182,7 @@ class AbilitiesScreen(Screen):
             platforms = ", ".join(set(e.platform for e in ab.executors)) or "-"
             table.add_row(
                 ab.ability_id[:12],
-                ab.name[:40],
+                truncate(ab.name, 40),
                 ab.tactic,
                 ab.technique_id,
                 platforms,

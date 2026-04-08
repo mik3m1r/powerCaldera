@@ -5,12 +5,10 @@ from __future__ import annotations
 import base64
 import logging
 
-logger = logging.getLogger(__name__)
-
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.markup import escape
-from textual.screen import Screen, ModalScreen
+from textual.screen import ModalScreen
 from textual.widgets import (
     DataTable, Footer, Static, Button, Input, Select, RichLog,
 )
@@ -18,8 +16,12 @@ from textual.widgets import (
 from ..api.models import (
     Adversary, CreateOperationRequest, Operation, OperationLink, Planner, Source,
 )
+from ..utils import truncate
 from ..widgets.header_bar import HeaderBar
 from ..widgets.status_bar import StatusBar
+from .base import BaseScreen
+
+logger = logging.getLogger(__name__)
 
 
 class CreateOperationModal(ModalScreen[bool]):
@@ -116,7 +118,7 @@ class CreateOperationModal(ModalScreen[bool]):
             self.notify(f"Error: {escape(str(e))}", severity="error")
 
 
-class OperationsScreen(Screen):
+class OperationsScreen(BaseScreen):
 
     BINDINGS = [
         ("r", "refresh", "Refrescar"),
@@ -160,19 +162,9 @@ class OperationsScreen(Screen):
         table.cursor_type = "row"
         self.load_data()
 
-    def load_data(self) -> None:
-        self.run_worker(self._load_data(), exclusive=True)
-
     async def _load_data(self) -> None:
         try:
-            connected = await self.app.client.health_check()
-            if not connected:
-                logger.warning("OperationsScreen: sin conexión a Caldera")
-                self.notify(
-                    "Sin conexión con Caldera. Verifica URL y API key ([r] para reintentar).",
-                    severity="warning",
-                    timeout=8,
-                )
+            if not await self._check_connection():
                 return
             client = self.app.client
             self._operations = await client.list_operations()
@@ -194,9 +186,9 @@ class OperationsScreen(Screen):
                 adv_name = op.adversary.name if op.adversary else "-"
                 table.add_row(
                     op.id[:8],
-                    op.name[:30],
+                    truncate(op.name, 30),
                     op.state,
-                    adv_name[:25],
+                    truncate(adv_name, 25),
                     op.start[:19] if op.start else "-",
                 )
         except Exception as e:
@@ -213,7 +205,7 @@ class OperationsScreen(Screen):
     def _show_detail(self, op: Operation) -> None:
         detail = self.query_one("#op-detail", Static)
         adv_name = op.adversary.name if op.adversary else "-"
-        planner_name = op.planner.get("name", op.planner.get("id", "-"))
+        planner_name = op.planner.get("name", op.planner.get("id", "-")) if op.planner else "-"
         detail.update(
             f"[bold #00ff41]{op.name}[/]\n\n"
             f"[bold]ID:[/] {op.id}\n"
@@ -225,9 +217,9 @@ class OperationsScreen(Screen):
         )
 
     async def _load_links(self, op_id: str) -> None:
+        log = self.query_one("#op-links-log", RichLog)
         try:
             links = await self.app.client.get_operation_links(op_id)
-            log = self.query_one("#op-links-log", RichLog)
             log.clear()
             if not links:
                 log.write("[dim]Sin links ejecutados[/]")
@@ -247,9 +239,11 @@ class OperationsScreen(Screen):
                         log.write(f"  [dim]{link.output[:200]}[/]")
         except Exception as e:
             logger.error("Error cargando links de operación %s: %s", op_id[:8], e, exc_info=True)
-            log = self.query_one("#op-links-log", RichLog)
-            log.clear()
-            log.write(f"[red]Error cargando links: {e}[/]")
+            try:
+                log.clear()
+                log.write(f"[red]Error cargando links: {e}[/]")
+            except Exception:
+                pass
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-new-op":

@@ -31,6 +31,7 @@ def setup_logging(
     numeric_level = getattr(logging, level.upper(), logging.INFO)
 
     root = logging.getLogger("powercaldera")
+    root.handlers.clear()
     root.setLevel(numeric_level)
 
     # Archivo rotativo

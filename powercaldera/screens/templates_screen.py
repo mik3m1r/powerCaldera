@@ -5,8 +5,6 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-logger = logging.getLogger(__name__)
-
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.markup import escape
@@ -14,10 +12,13 @@ from textual.screen import Screen
 from textual.widgets import (
     Button, DataTable, Footer, Input, RichLog, Static, TabbedContent, TabPane, TextArea,
 )
+
 from ..templates.loader import TemplateLoader
 from ..templates.models import TemplateModel
 from ..widgets.header_bar import HeaderBar
 from ..widgets.status_bar import StatusBar
+
+logger = logging.getLogger(__name__)
 
 
 class TemplatesScreen(Screen):
@@ -172,11 +173,11 @@ class TemplatesScreen(Screen):
             return
 
         try:
-            tpl = TemplateLoader.load_from_file(path)
-            self._imported_template = tpl
-            # Also show in textarea
             with open(path, encoding="utf-8") as f:
-                self.query_one("#json-input", TextArea).text = f.read()
+                content = f.read()
+            tpl = TemplateLoader.load_from_string(content)
+            self._imported_template = tpl
+            self.query_one("#json-input", TextArea).text = content
             self._show_import_preview(tpl)
             log.write(f"[green]\u2713 Archivo cargado: {path.name}[/]\n")
         except Exception as e:

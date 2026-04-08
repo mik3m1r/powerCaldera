@@ -7,13 +7,13 @@ import logging
 import uuid
 from pathlib import Path
 
-logger = logging.getLogger(__name__)
-
 from pydantic import ValidationError
 
 from ..api.client import CalderaClient
 from ..api.models import CreateAbilityRequest, CreateAdversaryRequest, Adversary
 from .models import TemplateModel, TemplateAbility, TemplatePlatforms
+
+logger = logging.getLogger(__name__)
 
 
 BUILTIN_DIR = Path(__file__).parent / "builtin"
@@ -101,8 +101,7 @@ class TemplateLoader:
         Returns:
             (adversary_creado, lista_de_ability_ids_creados)
         """
-        ability_ids: list[str] = []
-        created_ids: list[str] = []
+        created_ability_ids: list[str] = []
         logger.info("Deploying template '%s' (%d abilities)", template.name, len(template.abilities))
 
         try:
@@ -118,22 +117,21 @@ class TemplateLoader:
                     executors=_ability_to_executors(ability),
                 )
                 await client.create_ability(req)
-                ability_ids.append(aid)
-                created_ids.append(aid)
+                created_ability_ids.append(aid)
 
             adv_req = CreateAdversaryRequest(
                 adversary_id=_generate_id("pc-adv"),
                 name=template.name,
                 description=template.description,
-                atomic_ordering=ability_ids,
+                atomic_ordering=created_ability_ids,
                 tags=template.tags,
             )
             adversary = await client.create_adversary(adv_req)
-            return adversary, created_ids
+            return adversary, created_ability_ids
 
         except Exception:
-            logger.error("Deploy failed for '%s', rolling back %d abilities", template.name, len(created_ids), exc_info=True)
-            for aid in created_ids:
+            logger.error("Deploy failed for '%s', rolling back %d abilities", template.name, len(created_ability_ids), exc_info=True)
+            for aid in created_ability_ids:
                 try:
                     await client.delete_ability(aid)
                 except Exception:

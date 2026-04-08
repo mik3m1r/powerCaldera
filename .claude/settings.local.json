@@ -6,7 +6,20 @@
       "Bash(where python:*)",
       "Bash(.venv/Scripts/python.exe -m pytest tests/ -v)",
       "Bash(C:/Repos/powerCaldera/.venv/Scripts/python.exe -c \"print\\('test'\\)\")",
-      "Bash(py -m pytest tests/ -v)"
+      "Bash(py -m pytest tests/ -v)",
+      "Bash(git status)",
+      "Bash(git diff)",
+      "Bash(git log*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git push*)",
+      "Bash(gh pr*)",
+      "Bash(gh *)",
+      "Bash(.venv/Scripts/python.exe -c \"from powercaldera.app import PowerCalderaApp; from powercaldera.api.client import CalderaClient; from powercaldera.api.models import CalderaBaseModel, Ability, Operation; from powercaldera.templates.models import TemplateModel, TemplateAbility; from powercaldera.templates.loader import TemplateLoader; from powercaldera.config import Config; from powercaldera.logging import setup_logging; from powercaldera.utils import truncate; from powercaldera.screens.base import BaseScreen; print\\('All imports OK'\\)\")",
+      "Bash(.venv/Scripts/python.exe -c \"from powercaldera.app import PowerCalderaApp; from powercaldera.api.client import CalderaClient; from powercaldera.api.models import CalderaBaseModel, Ability, Operation; from powercaldera.templates.models import TemplateModel; from powercaldera.templates.loader import TemplateLoader; from powercaldera.config import Config; from powercaldera.logging import setup_logging; from powercaldera.utils import truncate; from powercaldera.screens.base import BaseScreen; print\\('All imports OK'\\)\")",
+      "Bash(.venv/Scripts/python.exe -c \"from powercaldera.utils import truncate; print\\(truncate\\('hello world', 5\\)\\); from powercaldera.api.models import CalderaBaseModel, Ability; print\\('models OK'\\); from powercaldera.config import Config; print\\('config OK'\\); from powercaldera.logging import setup_logging; print\\('logging OK'\\)\")",
+      "Bash(.venv/Scripts/python.exe -c \"from powercaldera.utils import truncate; print\\(truncate\\('hello world', 5\\)\\)\")",
+      "Bash(C:/Repos/powerCaldera/.venv/Scripts/python.exe -c \"import sys; sys.path.insert\\(0, 'C:/Repos/powerCaldera'\\); from powercaldera.utils import truncate; print\\(truncate\\('hello world', 5\\)\\)\")"
     ]
   }
 }

@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 import httpx
-
-logger = logging.getLogger(__name__)
 
 from .models import (
     Ability,
@@ -20,6 +19,8 @@ from .models import (
     Planner,
     Source,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class CalderaAPIError(Exception):
@@ -41,13 +42,13 @@ class CalderaClient:
             timeout=15.0,
         )
 
-    async def close(self):
+    async def close(self) -> None:
         await self._client.aclose()
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> CalderaClient:
         return self
 
-    async def __aexit__(self, *exc):
+    async def __aexit__(self, *exc: object) -> None:
         await self.close()
 
     def _check(self, resp: httpx.Response) -> None:
@@ -165,7 +166,7 @@ class CalderaClient:
         self._check(resp)
         return resp.text
 
-    async def get_operation_report(self, op_id: str) -> dict:
+    async def get_operation_report(self, op_id: str) -> dict[str, Any]:
         resp = await self._client.post(f"/api/v2/operations/{op_id}/report")
         self._check(resp)
         return resp.json()

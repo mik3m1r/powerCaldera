@@ -50,7 +50,7 @@ def main() -> None:
     except Exception as e:
         logger.error("Error loading configuration: %s", e, exc_info=True)
         print(f"[powerCaldera] Error loading configuration: {e}", file=sys.stderr)
-        return
+        sys.exit(1)
     if args.server:
         config.server_url = args.server
     if args.key:
@@ -67,7 +67,7 @@ def main() -> None:
     except Exception as e:
         logger.critical("Fatal error running app: %s", e, exc_info=True)
         print(f"[powerCaldera] Fatal error starting application: {e}", file=sys.stderr)
-        return
+        sys.exit(1)
 
 
 if __name__ == "__main__":
