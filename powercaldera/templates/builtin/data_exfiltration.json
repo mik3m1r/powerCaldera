@@ -1,0 +1,67 @@
+{
+  "name": "Exfiltración de Datos",
+  "description": "Simula técnicas de descubrimiento, recolección y exfiltración de datos sensibles.",
+  "tags": ["exfiltration", "data-theft", "collection"],
+  "abilities": [
+    {
+      "name": "Descubrimiento de Archivos y Directorios",
+      "tactic": "discovery",
+      "technique_id": "T1083",
+      "technique_name": "File and Directory Discovery",
+      "description": "Busca archivos con extensiones sensibles en el sistema.",
+      "platforms": {
+        "windows": {
+          "psh": "Get-ChildItem -Path $env:USERPROFILE -Include *.docx,*.xlsx,*.pdf,*.pptx,*.txt,*.csv -Recurse -ErrorAction SilentlyContinue | Select-Object -First 20 FullName, Length, LastWriteTime"
+        },
+        "linux": {
+          "sh": "find /home -type f \\( -name '*.conf' -o -name '*.key' -o -name '*.pem' -o -name '*.csv' -o -name '*.db' \\) 2>/dev/null | head -20"
+        }
+      }
+    },
+    {
+      "name": "Recolección de Datos del Sistema Local",
+      "tactic": "collection",
+      "technique_id": "T1005",
+      "technique_name": "Data from Local System",
+      "description": "Recopila datos sensibles del sistema local.",
+      "platforms": {
+        "windows": {
+          "psh": "Get-ChildItem -Path $env:USERPROFILE\\Desktop,$env:USERPROFILE\\Documents -ErrorAction SilentlyContinue | Select-Object -First 15 Name, Length, LastWriteTime; Get-ChildItem -Path $env:USERPROFILE\\Downloads -ErrorAction SilentlyContinue | Select-Object -First 10 Name, Length"
+        },
+        "linux": {
+          "sh": "ls -la ~/Desktop/ ~/Documents/ ~/Downloads/ 2>/dev/null | head -30"
+        }
+      }
+    },
+    {
+      "name": "Compresión de Datos Recolectados",
+      "tactic": "collection",
+      "technique_id": "T1560.001",
+      "technique_name": "Archive Collected Data: Archive via Utility",
+      "description": "Comprime datos recolectados para preparar exfiltración.",
+      "platforms": {
+        "windows": {
+          "psh": "Compress-Archive -Path $env:TEMP\\staged -DestinationPath $env:TEMP\\exfil_data.zip -Force -ErrorAction SilentlyContinue; Get-Item $env:TEMP\\exfil_data.zip -ErrorAction SilentlyContinue | Select-Object Name, Length"
+        },
+        "linux": {
+          "sh": "tar czf /tmp/exfil_data.tar.gz /tmp/staged 2>/dev/null; ls -la /tmp/exfil_data.tar.gz 2>/dev/null"
+        }
+      }
+    },
+    {
+      "name": "Verificación de Canales de Exfiltración",
+      "tactic": "exfiltration",
+      "technique_id": "T1041",
+      "technique_name": "Exfiltration Over C2 Channel",
+      "description": "Verifica conectividad de red disponible para posible exfiltración (simulación).",
+      "platforms": {
+        "windows": {
+          "psh": "Test-NetConnection -ComputerName 8.8.8.8 -Port 443 -InformationLevel Quiet; Get-NetTCPConnection -State Established | Group-Object RemoteAddress | Sort-Object Count -Descending | Select-Object -First 10 Count, Name"
+        },
+        "linux": {
+          "sh": "ss -tn state established | head -15; curl -s -o /dev/null -w '%{http_code}' https://www.google.com"
+        }
+      }
+    }
+  ]
+}

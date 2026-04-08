@@ -1,0 +1,14 @@
+# Configuración de powerCaldera
+# Copia este archivo a ~/.powercaldera/config.yaml y edita los valores
+
+server:
+  # URL del servidor MITRE Caldera
+  url: "http://localhost:8888"
+  # API Key (también puedes usar la variable de entorno CALDERA_API_KEY)
+  api_key: "ADMIN123"
+
+settings:
+  # Intervalo de refresco automático en segundos
+  refresh_interval: 30
+  # Directorio adicional de plantillas (opcional)
+  # templates_dir: "/ruta/a/mis/plantillas"

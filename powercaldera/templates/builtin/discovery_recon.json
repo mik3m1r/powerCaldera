@@ -1,0 +1,97 @@
+{
+  "name": "Reconocimiento y Descubrimiento",
+  "description": "Módulo de reconocimiento amplio: información del sistema, procesos, red, software de seguridad, sistemas remotos y grupos de permisos.",
+  "tags": ["discovery", "reconnaissance", "low-risk"],
+  "abilities": [
+    {
+      "name": "Información del Sistema",
+      "tactic": "discovery",
+      "technique_id": "T1082",
+      "technique_name": "System Information Discovery",
+      "description": "Recopila información detallada del sistema operativo.",
+      "platforms": {
+        "windows": {
+          "psh": "systeminfo | Select-String 'OS Name|OS Version|System Type|Total Physical Memory|Domain'; Get-CimInstance Win32_OperatingSystem | Select-Object Caption, Version, BuildNumber"
+        },
+        "linux": {
+          "sh": "uname -a; cat /etc/os-release 2>/dev/null; free -h; df -h | head -5"
+        }
+      }
+    },
+    {
+      "name": "Descubrimiento de Procesos",
+      "tactic": "discovery",
+      "technique_id": "T1057",
+      "technique_name": "Process Discovery",
+      "description": "Lista procesos activos y sus propietarios.",
+      "platforms": {
+        "windows": {
+          "psh": "Get-Process | Sort-Object CPU -Descending | Select-Object -First 20 ProcessName, Id, CPU, WorkingSet64"
+        },
+        "linux": {
+          "sh": "ps aux --sort=-%cpu | head -20"
+        }
+      }
+    },
+    {
+      "name": "Descubrimiento de Configuración de Red",
+      "tactic": "discovery",
+      "technique_id": "T1016",
+      "technique_name": "System Network Configuration Discovery",
+      "description": "Recopila información de configuración de red.",
+      "platforms": {
+        "windows": {
+          "psh": "Get-NetIPAddress -AddressFamily IPv4 | Select-Object InterfaceAlias, IPAddress, PrefixLength; Get-DnsClientServerAddress | Select-Object InterfaceAlias, ServerAddresses; Get-NetRoute | Select-Object -First 10 DestinationPrefix, NextHop"
+        },
+        "linux": {
+          "sh": "ip addr show; ip route; cat /etc/resolv.conf 2>/dev/null"
+        }
+      }
+    },
+    {
+      "name": "Descubrimiento de Software de Seguridad",
+      "tactic": "discovery",
+      "technique_id": "T1518.001",
+      "technique_name": "Software Discovery: Security Software Discovery",
+      "description": "Identifica software de seguridad instalado.",
+      "platforms": {
+        "windows": {
+          "psh": "Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntiVirusProduct -ErrorAction SilentlyContinue | Select-Object displayName; Get-MpComputerStatus -ErrorAction SilentlyContinue | Select-Object AMRunningMode, RealTimeProtectionEnabled, AntivirusEnabled"
+        },
+        "linux": {
+          "sh": "ps aux | grep -iE 'falcon|crowdstrike|sentinel|ossec|wazuh|clamd|sophos' | grep -v grep; iptables -L -n 2>/dev/null | head -10"
+        }
+      }
+    },
+    {
+      "name": "Descubrimiento de Sistemas Remotos",
+      "tactic": "discovery",
+      "technique_id": "T1018",
+      "technique_name": "Remote System Discovery",
+      "description": "Identifica otros sistemas en la red.",
+      "platforms": {
+        "windows": {
+          "psh": "Get-NetNeighbor -State Reachable | Select-Object IPAddress, LinkLayerAddress, InterfaceAlias; Test-Connection -Count 1 -Quiet -ComputerName (1..5 | ForEach-Object { \"192.168.1.$_\" }) -ErrorAction SilentlyContinue"
+        },
+        "linux": {
+          "sh": "arp -a 2>/dev/null || ip neigh show; ping -c 1 -W 1 192.168.1.1 2>/dev/null"
+        }
+      }
+    },
+    {
+      "name": "Descubrimiento de Grupos y Permisos",
+      "tactic": "discovery",
+      "technique_id": "T1069",
+      "technique_name": "Permission Groups Discovery",
+      "description": "Enumera grupos y membresías del usuario actual.",
+      "platforms": {
+        "windows": {
+          "psh": "whoami /groups; Get-LocalGroup | Select-Object Name, Description"
+        },
+        "linux": {
+          "sh": "id; groups; cat /etc/group | grep -v nobody | tail -15"
+        }
+      }
+    }
+  ]
+}

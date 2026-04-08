@@ -1,0 +1,79 @@
+{
+  "name": "Acceso Inicial y Persistencia",
+  "description": "Simula técnicas de acceso inicial seguidas de establecimiento de persistencia y evasión de defensas.",
+  "tags": ["initial-access", "persistence", "defense-evasion"],
+  "abilities": [
+    {
+      "name": "Verificar Configuración de PowerShell",
+      "tactic": "execution",
+      "technique_id": "T1059.001",
+      "technique_name": "Command and Scripting Interpreter: PowerShell",
+      "description": "Verifica la política de ejecución de PowerShell y versión instalada.",
+      "platforms": {
+        "windows": {
+          "psh": "Get-ExecutionPolicy -List; $PSVersionTable"
+        },
+        "linux": {
+          "sh": "which pwsh 2>/dev/null && pwsh -Version || echo 'PowerShell no instalado'"
+        }
+      }
+    },
+    {
+      "name": "Enumeración de Claves de Registro Run",
+      "tactic": "persistence",
+      "technique_id": "T1547.001",
+      "technique_name": "Boot or Logon Autostart Execution: Registry Run Keys",
+      "description": "Enumera entradas de registro en claves Run/RunOnce para detectar persistencia existente.",
+      "platforms": {
+        "windows": {
+          "psh": "Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run' -ErrorAction SilentlyContinue; Get-ItemProperty -Path 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run' -ErrorAction SilentlyContinue"
+        }
+      }
+    },
+    {
+      "name": "Enumeración de Servicios de Inicio",
+      "tactic": "persistence",
+      "technique_id": "T1543.003",
+      "technique_name": "Create or Modify System Process: Windows Service",
+      "description": "Lista servicios configurados para inicio automático.",
+      "platforms": {
+        "windows": {
+          "psh": "Get-Service | Where-Object {$_.StartType -eq 'Automatic'} | Select-Object -First 20 Name, Status, DisplayName"
+        },
+        "linux": {
+          "sh": "systemctl list-unit-files --state=enabled --type=service | head -20"
+        }
+      }
+    },
+    {
+      "name": "Descubrimiento de Software de Seguridad",
+      "tactic": "defense-evasion",
+      "technique_id": "T1518.001",
+      "technique_name": "Software Discovery: Security Software Discovery",
+      "description": "Identifica software de seguridad instalado (antivirus, EDR, firewall).",
+      "platforms": {
+        "windows": {
+          "psh": "Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntiVirusProduct -ErrorAction SilentlyContinue | Select-Object displayName, productState; Get-Service | Where-Object {$_.DisplayName -match 'defender|symantec|mcafee|crowdstrike|sentinel|carbon'}"
+        },
+        "linux": {
+          "sh": "which clamscan 2>/dev/null && clamscan --version; ps aux | grep -iE 'falcon|crowdstrike|sentinel|ossec|wazuh' | grep -v grep"
+        }
+      }
+    },
+    {
+      "name": "Verificación de Masquerading",
+      "tactic": "defense-evasion",
+      "technique_id": "T1036.005",
+      "technique_name": "Masquerading: Match Legitimate Name or Location",
+      "description": "Busca binarios con nombres sospechosos en ubicaciones inusuales.",
+      "platforms": {
+        "windows": {
+          "psh": "Get-ChildItem -Path $env:TEMP,$env:APPDATA -Include svchost.exe,csrss.exe,explorer.exe -Recurse -ErrorAction SilentlyContinue | Select-Object FullName, Length, LastWriteTime"
+        },
+        "linux": {
+          "sh": "find /tmp /var/tmp /dev/shm -type f -executable 2>/dev/null | head -20"
+        }
+      }
+    }
+  ]
+}

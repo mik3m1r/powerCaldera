@@ -1,0 +1,67 @@
+{
+  "name": "APT Movimiento Lateral",
+  "description": "Simula técnicas de APT enfocadas en movimiento lateral: descubrimiento de dominio, Kerberoasting, pass-the-hash, ejecución remota y persistencia.",
+  "tags": ["apt", "lateral-movement", "post-exploitation"],
+  "abilities": [
+    {
+      "name": "Descubrimiento de Confianza de Dominio",
+      "tactic": "discovery",
+      "technique_id": "T1482",
+      "technique_name": "Domain Trust Discovery",
+      "description": "Enumera relaciones de confianza entre dominios.",
+      "platforms": {
+        "windows": {
+          "psh": "Get-ADTrust -Filter * -ErrorAction SilentlyContinue; nltest /domain_trusts"
+        }
+      }
+    },
+    {
+      "name": "Enumeración de Usuarios del Dominio",
+      "tactic": "discovery",
+      "technique_id": "T1087.002",
+      "technique_name": "Account Discovery: Domain Account",
+      "description": "Enumera cuentas de usuario del dominio Active Directory.",
+      "platforms": {
+        "windows": {
+          "psh": "Get-ADUser -Filter * -Properties LastLogonDate | Select-Object -First 20 Name, SamAccountName, Enabled, LastLogonDate"
+        }
+      }
+    },
+    {
+      "name": "Kerberoasting",
+      "tactic": "credential-access",
+      "technique_id": "T1558.003",
+      "technique_name": "Steal or Forge Kerberos Tickets: Kerberoasting",
+      "description": "Solicita tickets de servicio Kerberos para cuentas con SPN configurado.",
+      "platforms": {
+        "windows": {
+          "psh": "Get-ADUser -Filter {ServicePrincipalName -ne '$null'} -Properties ServicePrincipalName | Select-Object SamAccountName, ServicePrincipalName"
+        }
+      }
+    },
+    {
+      "name": "Ejecución Remota via WMI",
+      "tactic": "execution",
+      "technique_id": "T1047",
+      "technique_name": "Windows Management Instrumentation",
+      "description": "Ejecuta comandos remotos utilizando WMI.",
+      "platforms": {
+        "windows": {
+          "psh": "Get-WmiObject -Class Win32_Process -ComputerName localhost | Select-Object -First 10 Name, ProcessId, CommandLine"
+        }
+      }
+    },
+    {
+      "name": "Persistencia via Tarea Programada",
+      "tactic": "persistence",
+      "technique_id": "T1053.005",
+      "technique_name": "Scheduled Task/Job: Scheduled Task",
+      "description": "Enumera tareas programadas existentes para identificar posibles vectores de persistencia.",
+      "platforms": {
+        "windows": {
+          "psh": "Get-ScheduledTask | Where-Object {$_.State -eq 'Ready'} | Select-Object -First 15 TaskName, TaskPath, State"
+        }
+      }
+    }
+  ]
+}

