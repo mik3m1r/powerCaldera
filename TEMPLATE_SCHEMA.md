@@ -46,10 +46,10 @@ Ejecutores válidos: psh (PowerShell), cmd (Windows CMD), sh (shell), bash, pwsh
 Plataformas válidas: windows, linux, darwin.
 
 Reglas:
-- Cada ability debe tener al menos una plataforma con un comando
+- Si querés desplegar la ability en Caldera, definí al menos una plataforma con un comando
 - technique_id debe empezar con T (ej: T1082, T1003.001)
 - Los comandos deben ser seguros para simulación (no destructivos)
-- Incluye al menos 3 abilities por plantilla
+- Incluye 1 ability como mínimo; 3 o más es recomendable para una secuencia útil
 - Ordena las abilities en orden lógico de ejecución
 ```
 
@@ -97,7 +97,7 @@ Reglas:
 | `abilities[].tactic` | string | Táctica MITRE ATT&CK |
 | `abilities[].technique_id` | string | ID de técnica (empieza con T) |
 | `abilities[].technique_name` | string | Nombre de la técnica |
-| `abilities[].platforms` | object | Al menos una plataforma |
+| `abilities[].platforms` | object | Plataformas y comandos por ejecutor |
 
 ### Campos Opcionales
 
@@ -203,7 +203,7 @@ powerCaldera valida automáticamente cada plantilla al importar:
 - Campos obligatorios presentes
 - Tácticas en la lista válida
 - technique_id empieza con "T"
-- Al menos una plataforma por ability
 - Ejecutores en la lista válida
+- Las plataformas son opcionales; si una ability no define ninguna, la plantilla sigue siendo válida pero no generará executors al desplegarse
 
 Los errores de validación se muestran con la ubicación exacta del error.

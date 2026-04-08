@@ -8,7 +8,9 @@ server:
   api_key: "ADMIN123"
 
 settings:
-  # Intervalo de refresco automático en segundos
+  # Valor cargado por Config, pero la UI todavía no lo usa para refresco automático
   refresh_interval: 30
-  # Directorio adicional de plantillas (opcional)
+  # Directorio adicional de plantillas. Se carga, pero hoy no está conectado al cargador de plantillas
   # templates_dir: "/ruta/a/mis/plantillas"
+  # Nivel de log (también puede venir de CALDERA_LOG_LEVEL o --log-level)
+  log_level: "INFO"

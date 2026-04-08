@@ -56,6 +56,14 @@ settings:
 
 Se puede especificar otra ruta con `--config /ruta/config.yaml`.
 
+Variables de entorno soportadas:
+
+- `CALDERA_URL`
+- `CALDERA_API_KEY`
+- `CALDERA_LOG_LEVEL`
+
+`refresh_interval` y `templates_dir` se cargan desde el YAML, pero en la versión actual todavía no están conectadas a un comportamiento visible de la UI.
+
 ## Uso
 
 ```bash
