@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
+from textual.markup import escape
 from textual.screen import Screen, ModalScreen
 from textual.timer import Timer
 from textual.widgets import (
@@ -128,7 +129,7 @@ class CreateAbilityModal(ModalScreen[bool]):
             self.dismiss(True)
         except Exception as e:
             logger.error("Error creando habilidad: %s", e, exc_info=True)
-            self.notify(f"Error: {e}", severity="error")
+            self.notify(f"Error: {escape(str(e))}", severity="error")
 
 
 class AbilitiesScreen(Screen):
@@ -165,21 +166,21 @@ class AbilitiesScreen(Screen):
         self.run_worker(self._load_data(), exclusive=True)
 
     async def _load_data(self) -> None:
-        connected = await self.app.client.health_check()
-        if not connected:
-            logger.warning("AbilitiesScreen: sin conexión a Caldera")
-            self.notify(
-                "Sin conexión con Caldera. Verifica URL y API key ([r] para reintentar).",
-                severity="warning",
-                timeout=8,
-            )
-            return
         try:
+            connected = await self.app.client.health_check()
+            if not connected:
+                logger.warning("AbilitiesScreen: sin conexión a Caldera")
+                self.notify(
+                    "Sin conexión con Caldera. Verifica URL y API key ([r] para reintentar).",
+                    severity="warning",
+                    timeout=8,
+                )
+                return
             self._abilities = await self.app.get_abilities()
             self._render_table(self._abilities)
         except Exception as e:
             logger.error("Error al cargar habilidades: %s", e, exc_info=True)
-            self.notify(f"Error al cargar habilidades: {e}", severity="error")
+            self.notify(f"Error al cargar habilidades: {escape(str(e))}", severity="error")
 
     def _render_table(self, abilities: list[Ability]) -> None:
         self._displayed = abilities[:MAX_ROWS]

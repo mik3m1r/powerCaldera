@@ -84,10 +84,14 @@ class PowerCalderaApp(App):
         if not force and self.abilities_cache.is_valid:
             logger.debug("Abilities cache hit (%d items)", len(self.abilities_cache.abilities))
             return self.abilities_cache.abilities
-        abilities = await self.client.list_abilities()
-        self.abilities_cache.update(abilities)
-        logger.debug("Abilities fetched from API: %d items", len(abilities))
-        return abilities
+        try:
+            abilities = await self.client.list_abilities()
+            self.abilities_cache.update(abilities)
+            logger.debug("Abilities fetched from API: %d items", len(abilities))
+            return abilities
+        except Exception as e:
+            logger.error("Error fetching abilities: %s", e, exc_info=True)
+            return self.abilities_cache.abilities
 
     def invalidate_cache(self) -> None:
         self.abilities_cache.invalidate()
@@ -107,5 +111,18 @@ class PowerCalderaApp(App):
 
     async def action_quit(self) -> None:
         logger.info("Cerrando powerCaldera")
-        await self.client.close()
+        try:
+            await self.client.close()
+        except Exception as e:
+            logger.warning("Error closing client: %s", e, exc_info=True)
         self.exit()
+
+    def on_exception(self, error: Exception) -> None:
+        """Catch-all for unhandled exceptions — log them and show a notification."""
+        logger.critical("Unhandled exception in app: %s", error, exc_info=True)
+        try:
+            from textual.markup import escape
+
+            self.notify(f"Error inesperado: {escape(str(error))}", severity="error", timeout=8)
+        except Exception as notify_error:
+            logger.error("Failed to notify about unhandled exception: %s", notify_error, exc_info=True)

@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 
 from textual.app import ComposeResult
+from textual.markup import escape
 
 logger = logging.getLogger(__name__)
 from textual.screen import Screen
@@ -41,10 +42,9 @@ class DashboardScreen(Screen):
         self.run_worker(self._load_data(), exclusive=True)
 
     async def _load_data(self) -> None:
-        status_bar = self.query_one(StatusBar)
-        client = self.app.client
-
         try:
+            status_bar = self.query_one(StatusBar)
+            client = self.app.client
             connected = await client.health_check()
             agents = await client.list_agents() if connected else []
             operations = await client.list_operations() if connected else []
@@ -83,8 +83,12 @@ class DashboardScreen(Screen):
 
         except Exception as e:
             logger.error("Error cargando dashboard: %s", e, exc_info=True)
-            status_bar.set_status(connected=False, server_url=self.app.config.server_url)
-            self.notify(f"Error de conexión: {e}", severity="error")
+            try:
+                status_bar = self.query_one(StatusBar)
+                status_bar.set_status(connected=False, server_url=self.app.config.server_url)
+            except Exception:
+                logger.debug("No se pudo actualizar el estado del dashboard", exc_info=True)
+            self.notify(f"Error de conexión: {escape(str(e))}", severity="error")
 
     def action_refresh(self) -> None:
         self.load_data()

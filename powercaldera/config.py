@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
+import sys
 
 import yaml
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -21,15 +26,41 @@ class Config:
     def load(cls, path: Path | None = None) -> Config:
         data: dict = {}
         if path and path.exists():
-            with open(path, encoding="utf-8") as f:
-                raw = yaml.safe_load(f) or {}
-            server = raw.get("server", {})
-            settings = raw.get("settings", {})
-            data["server_url"] = server.get("url", cls.server_url)
-            data["api_key"] = server.get("api_key", "")
-            data["refresh_interval"] = settings.get("refresh_interval", 30)
-            data["templates_dir"] = settings.get("templates_dir")
-            data["log_level"] = settings.get("log_level", "INFO")
+            try:
+                with open(path, encoding="utf-8") as f:
+                    raw = yaml.safe_load(f) or {}
+                if isinstance(raw, dict):
+                    server = raw.get("server", {})
+                    settings = raw.get("settings", {})
+                    data["server_url"] = server.get("url", cls.server_url)
+                    data["api_key"] = server.get("api_key", "")
+                    data["refresh_interval"] = settings.get("refresh_interval", 30)
+                    data["templates_dir"] = settings.get("templates_dir")
+                    data["log_level"] = settings.get("log_level", "INFO")
+            except yaml.YAMLError as e:
+                logger.warning("Invalid YAML config at %s: %s", path, e, exc_info=True)
+                print(
+                    f"[powerCaldera] Warning: config file '{path}' has invalid YAML: {e}",
+                    file=sys.stderr,
+                )
+            except OSError as e:
+                logger.warning("Cannot read config file %s: %s", path, e, exc_info=True)
+                print(
+                    f"[powerCaldera] Warning: cannot read config file '{path}': {e}",
+                    file=sys.stderr,
+                )
+            except TypeError as e:
+                logger.warning("Invalid config data in %s: %s", path, e, exc_info=True)
+                print(
+                    f"[powerCaldera] Warning: invalid config file '{path}': {e}",
+                    file=sys.stderr,
+                )
+            except Exception as e:
+                logger.warning("Unexpected error loading config %s: %s", path, e, exc_info=True)
+                print(
+                    f"[powerCaldera] Warning: error loading config file '{path}': {e}",
+                    file=sys.stderr,
+                )
 
         data["server_url"] = os.environ.get("CALDERA_URL", data.get("server_url", cls.server_url))
         data["api_key"] = os.environ.get("CALDERA_API_KEY", data.get("api_key", ""))

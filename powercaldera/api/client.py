@@ -23,10 +23,14 @@ from .models import (
 
 
 class CalderaAPIError(Exception):
+    """API error wrapper; sanitize display text to avoid UI markup injection."""
+
     def __init__(self, status_code: int, detail: str = ""):
         self.status_code = status_code
+        # Store raw detail but sanitize for display.
         self.detail = detail
-        super().__init__(f"HTTP {status_code}: {detail}")
+        safe_detail = detail.replace("[", "(").replace("]", ")")
+        super().__init__(f"HTTP {status_code}: {safe_detail}")
 
 
 class CalderaClient:

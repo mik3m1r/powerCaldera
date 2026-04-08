@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
+from textual.markup import escape
 from textual.screen import Screen, ModalScreen
 from textual.widgets import (
     DataTable, Footer, Static, Button, Input, Select, RichLog,
@@ -112,7 +113,7 @@ class CreateOperationModal(ModalScreen[bool]):
             self.dismiss(True)
         except Exception as e:
             logger.error("Error creando operación: %s", e, exc_info=True)
-            self.notify(f"Error: {e}", severity="error")
+            self.notify(f"Error: {escape(str(e))}", severity="error")
 
 
 class OperationsScreen(Screen):
@@ -163,16 +164,16 @@ class OperationsScreen(Screen):
         self.run_worker(self._load_data(), exclusive=True)
 
     async def _load_data(self) -> None:
-        connected = await self.app.client.health_check()
-        if not connected:
-            logger.warning("OperationsScreen: sin conexión a Caldera")
-            self.notify(
-                "Sin conexión con Caldera. Verifica URL y API key ([r] para reintentar).",
-                severity="warning",
-                timeout=8,
-            )
-            return
         try:
+            connected = await self.app.client.health_check()
+            if not connected:
+                logger.warning("OperationsScreen: sin conexión a Caldera")
+                self.notify(
+                    "Sin conexión con Caldera. Verifica URL y API key ([r] para reintentar).",
+                    severity="warning",
+                    timeout=8,
+                )
+                return
             client = self.app.client
             self._operations = await client.list_operations()
             self._adversaries = await client.list_adversaries()
@@ -200,7 +201,7 @@ class OperationsScreen(Screen):
                 )
         except Exception as e:
             logger.error("Error al cargar operaciones: %s", e, exc_info=True)
-            self.notify(f"Error al cargar operaciones: {e}", severity="error")
+            self.notify(f"Error al cargar operaciones: {escape(str(e))}", severity="error")
 
     def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
         idx = event.cursor_row
@@ -273,7 +274,7 @@ class OperationsScreen(Screen):
             self.load_data()
         except Exception as e:
             logger.error("Error cambiando estado de operación: %s", e, exc_info=True)
-            self.notify(f"Error: {e}", severity="error")
+            self.notify(f"Error: {escape(str(e))}", severity="error")
 
     async def _generate_report(self) -> None:
         if not self._selected_op:
@@ -294,7 +295,7 @@ class OperationsScreen(Screen):
             self.notify("Reporte generado", severity="information")
         except Exception as e:
             logger.error("Error generando reporte: %s", e, exc_info=True)
-            self.notify(f"Error: {e}", severity="error")
+            self.notify(f"Error: {escape(str(e))}", severity="error")
 
     def action_refresh(self) -> None:
         self.load_data()

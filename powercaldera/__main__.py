@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import sys
 from pathlib import Path
 
 from .config import Config, DEFAULT_CONFIG_PATH
@@ -44,7 +45,12 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    config = Config.load(args.config)
+    try:
+        config = Config.load(args.config)
+    except Exception as e:
+        logger.error("Error loading configuration: %s", e, exc_info=True)
+        print(f"[powerCaldera] Error loading configuration: {e}", file=sys.stderr)
+        return
     if args.server:
         config.server_url = args.server
     if args.key:
@@ -56,7 +62,12 @@ def main() -> None:
     logger.info("powerCaldera v0.1.0 — server=%s", config.server_url)
 
     app = PowerCalderaApp(config=config)
-    app.run()
+    try:
+        app.run()
+    except Exception as e:
+        logger.critical("Fatal error running app: %s", e, exc_info=True)
+        print(f"[powerCaldera] Fatal error starting application: {e}", file=sys.stderr)
+        return
 
 
 if __name__ == "__main__":

@@ -55,7 +55,7 @@ class TemplateLoader:
                 try:
                     tpl = self.load_from_file(f)
                     results.append((f.name, tpl))
-                except (json.JSONDecodeError, ValidationError) as e:
+                except (json.JSONDecodeError, ValidationError, OSError) as e:
                     logger.warning("Skipping invalid template %s: %s", f.name, e)
                     continue
         return results
@@ -68,6 +68,10 @@ class TemplateLoader:
 
     @staticmethod
     def load_from_string(text: str) -> TemplateModel:
+        """Parse and validate a template from a JSON string.
+
+        Raises json.JSONDecodeError or ValidationError on failure.
+        """
         data = json.loads(text)
         return TemplateModel.model_validate(data)
 
@@ -133,5 +137,5 @@ class TemplateLoader:
                 try:
                     await client.delete_ability(aid)
                 except Exception:
-                    logger.warning("Rollback: failed to delete ability %s", aid)
+                    logger.warning("Rollback: failed to delete ability %s", aid, exc_info=True)
             raise

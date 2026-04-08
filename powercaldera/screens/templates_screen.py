@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
+from textual.markup import escape
 from textual.screen import Screen
 from textual.widgets import (
     Button, DataTable, Footer, Input, RichLog, Static, TabbedContent, TabPane, TextArea,
@@ -82,12 +83,16 @@ class TemplatesScreen(Screen):
         self._load_builtin()
 
     def _load_builtin(self) -> None:
-        self._builtin = self._loader.list_builtin()
-        table = self.query_one("#builtin-table", DataTable)
-        table.clear()
-        for filename, tpl in self._builtin:
-            tactics = ", ".join(sorted(set(ab.tactic for ab in tpl.abilities)))
-            table.add_row(filename, tpl.name, str(len(tpl.abilities)), tactics[:40])
+        try:
+            self._builtin = self._loader.list_builtin()
+            table = self.query_one("#builtin-table", DataTable)
+            table.clear()
+            for filename, tpl in self._builtin:
+                tactics = ", ".join(sorted(set(ab.tactic for ab in tpl.abilities)))
+                table.add_row(filename, tpl.name, str(len(tpl.abilities)), tactics[:40])
+        except Exception as e:
+            logger.error("Error loading builtin templates: %s", e, exc_info=True)
+            self.notify(f"Error cargando plantillas: {escape(str(e))}", severity="error")
 
     def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
         if event.data_table.id == "builtin-table":
@@ -177,7 +182,7 @@ class TemplatesScreen(Screen):
         except Exception as e:
             logger.error("Error cargando archivo de plantilla '%s': %s", path_str, e, exc_info=True)
             self._imported_template = None
-            log.write(f"[red]Error: {e}[/]")
+            log.write(f"[red]Error: {escape(str(e))}[/]")
 
     def _show_import_preview(self, tpl: TemplateModel) -> None:
         log = self.query_one("#import-preview-log", RichLog)
@@ -209,7 +214,7 @@ class TemplatesScreen(Screen):
             )
         except Exception as e:
             logger.error("Error al desplegar plantilla '%s': %s", tpl.name, e, exc_info=True)
-            self.notify(f"Error al desplegar: {e}", severity="error")
+            self.notify(f"Error al desplegar: {escape(str(e))}", severity="error")
 
     def action_refresh(self) -> None:
         self._load_builtin()
