@@ -9,6 +9,7 @@ from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.markup import escape
 from textual.screen import ModalScreen
+from textual.timer import Timer
 from textual.widgets import (
     DataTable, Footer, Static, Button, Input, Select, RichLog,
 )
@@ -22,6 +23,38 @@ from ..widgets.status_bar import StatusBar
 from .base import BaseScreen
 
 logger = logging.getLogger(__name__)
+
+
+class ConfirmFinishModal(ModalScreen[bool]):
+    """Modal de confirmación antes de finalizar una operación."""
+
+    DEFAULT_CSS = """
+    ConfirmFinishModal {
+        align: center middle;
+    }
+    #confirm-dialog {
+        width: 60;
+        height: auto;
+        background: #1a1a2e;
+        border: thick #ff4444;
+        padding: 2 3;
+    }
+    """
+
+    def __init__(self, op_name: str) -> None:
+        super().__init__()
+        self._op_name = op_name
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="confirm-dialog"):
+            yield Static(f"[bold #ff4444]⚠ Confirmar finalización[/]")
+            yield Static(f"\n¿Finalizar la operación '[bold]{escape(self._op_name)}[/]'?\n\nEsta acción no se puede deshacer.")
+            with Horizontal():
+                yield Button("Finalizar", variant="error", id="btn-confirm")
+                yield Button("Cancelar", variant="primary", id="btn-cancel")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss(event.button.id == "btn-confirm")
 
 
 class CreateOperationModal(ModalScreen[bool]):
@@ -134,14 +167,15 @@ class OperationsScreen(BaseScreen):
         self._planners: list[Planner] = []
         self._sources: list[Source] = []
         self._selected_op: Operation | None = None
+        self._refresh_timer: Timer | None = None
 
     def compose(self) -> ComposeResult:
         yield HeaderBar()
         yield Static("[bold #00ff41]--- Operaciones ---[/]", classes="section-title")
-        with Horizontal(classes="split-horizontal"):
-            with Vertical():
+        with Horizontal(classes="content-area"):
+            with Vertical(classes="pane-left"):
                 yield DataTable(id="ops-table")
-                with Horizontal():
+                with Horizontal(classes="button-row"):
                     yield Button("Crear", variant="success", id="btn-new-op")
                     yield Button("Pausar", id="btn-pause-op")
                     yield Button("Reanudar", id="btn-resume-op")
@@ -161,6 +195,10 @@ class OperationsScreen(BaseScreen):
         table.add_columns("ID", "Nombre", "Estado", "Adversario", "Inicio")
         table.cursor_type = "row"
         self.load_data()
+
+        # Auto-refresh wired to config.refresh_interval
+        interval = float(getattr(getattr(self.app, "config", None), "refresh_interval", 30))
+        self._refresh_timer = self.set_interval(interval, self.load_data)
 
     async def _load_data(self) -> None:
         try:
@@ -207,13 +245,13 @@ class OperationsScreen(BaseScreen):
         adv_name = op.adversary.name if op.adversary else "-"
         planner_name = op.planner.get("name", op.planner.get("id", "-")) if op.planner else "-"
         detail.update(
-            f"[bold #00ff41]{op.name}[/]\n\n"
-            f"[bold]ID:[/] {op.id}\n"
-            f"[bold]Estado:[/] {op.state}\n"
-            f"[bold]Adversario:[/] {adv_name}\n"
-            f"[bold]Planner:[/] {planner_name}\n"
-            f"[bold]Inicio:[/] {op.start[:19] if op.start else '-'}\n"
-            f"[bold]Fin:[/] {op.finish[:19] if op.finish else '-'}"
+            f"[bold #00ff41]{escape(op.name)}[/]\n\n"
+            f"[bold]ID:[/] {escape(op.id)}\n"
+            f"[bold]Estado:[/] {escape(op.state)}\n"
+            f"[bold]Adversario:[/] {escape(adv_name)}\n"
+            f"[bold]Planner:[/] {escape(planner_name)}\n"
+            f"[bold]Inicio:[/] {escape(op.start[:19]) if op.start else '-'}\n"
+            f"[bold]Fin:[/] {escape(op.finish[:19]) if op.finish else '-'}"
         )
 
     async def _load_links(self, op_id: str) -> None:
@@ -241,7 +279,7 @@ class OperationsScreen(BaseScreen):
             logger.error("Error cargando links de operación %s: %s", op_id[:8], e, exc_info=True)
             try:
                 log.clear()
-                log.write(f"[red]Error cargando links: {e}[/]")
+                log.write(f"[red]Error cargando links: {escape(str(e))}[/]")
             except Exception:
                 pass
 
@@ -253,7 +291,7 @@ class OperationsScreen(BaseScreen):
         elif event.button.id == "btn-resume-op":
             self.run_worker(self._change_state("running"), exclusive=True)
         elif event.button.id == "btn-finish-op":
-            self.run_worker(self._change_state("finished"), exclusive=True)
+            self.action_finish()
         elif event.button.id == "btn-report-op":
             self.run_worker(self._generate_report(), exclusive=True)
 
@@ -307,4 +345,15 @@ class OperationsScreen(BaseScreen):
         self.run_worker(self._change_state("paused"), exclusive=True)
 
     def action_finish(self) -> None:
-        self.run_worker(self._change_state("finished"), exclusive=True)
+        if not self._selected_op:
+            self.notify("Selecciona una operación primero", severity="warning")
+            return
+
+        def on_confirm(confirmed: bool) -> None:
+            if confirmed:
+                self.run_worker(self._change_state("finished"), exclusive=True)
+
+        self.app.push_screen(
+            ConfirmFinishModal(self._selected_op.name),
+            callback=on_confirm,
+        )

@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
+from importlib.metadata import version, PackageNotFoundError
 from pathlib import Path
 
 from .config import Config, DEFAULT_CONFIG_PATH
@@ -12,6 +13,13 @@ from .logging import setup_logging
 from .app import PowerCalderaApp
 
 logger = logging.getLogger(__name__)
+
+
+def _get_version() -> str:
+    try:
+        return version("powercaldera")
+    except PackageNotFoundError:
+        return "dev"
 
 
 def main() -> None:
@@ -65,7 +73,7 @@ def main() -> None:
         sys.exit(1)
 
     setup_logging(level=config.log_level)
-    logger.info("powerCaldera v0.1.0 — server=%s", config.server_url)
+    logger.info("powerCaldera v%s — server=%s", _get_version(), config.server_url)
 
     app = PowerCalderaApp(config=config)
     try:

@@ -9,6 +9,7 @@ from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.markup import escape
 from textual.screen import ModalScreen
+from textual.timer import Timer
 from textual.widgets import (
     DataTable, Footer, Input, Static, Button, SelectionList,
 )
@@ -20,6 +21,8 @@ from ..widgets.status_bar import StatusBar
 from .base import BaseScreen
 
 logger = logging.getLogger(__name__)
+
+SEARCH_DEBOUNCE_S = 0.3
 
 
 class CreateAdversaryModal(ModalScreen[bool]):
@@ -112,15 +115,21 @@ class AdversariesScreen(BaseScreen):
     def __init__(self) -> None:
         super().__init__()
         self._adversaries: list[Adversary] = []
+        self._displayed: list[Adversary] = []
         self._abilities: list[Ability] = []
         self._ability_map: dict[str, Ability] = {}
+        self._search_timer: Timer | None = None
 
     def compose(self) -> ComposeResult:
         yield HeaderBar()
         yield Static("[bold #00ff41]--- Adversarios ---[/]", classes="section-title")
-        with Horizontal(classes="split-horizontal"):
-            yield DataTable(id="adversaries-table")
-            yield Static("Selecciona un adversario para ver detalles", id="adversary-detail")
+        yield Input(placeholder="Buscar por nombre, ID o tag...", id="search-input")
+        yield Static("", id="result-count")
+        with Horizontal(classes="content-area"):
+            with Vertical(classes="pane-left"):
+                yield DataTable(id="adversaries-table")
+            with Vertical(classes="pane-right"):
+                yield Static("Selecciona un adversario para ver detalles", id="adversary-detail")
         yield StatusBar()
         yield Footer()
 
@@ -137,15 +146,16 @@ class AdversariesScreen(BaseScreen):
             self._adversaries = await self.app.client.list_adversaries()
             self._abilities = await self.app.get_abilities()
             self._ability_map = self.app.abilities_cache.ability_map
-            self._render_table()
+            self._render_table(self._adversaries)
         except Exception as e:
             logger.error("Error al cargar adversarios: %s", e, exc_info=True)
             self.notify(f"Error al cargar adversarios: {escape(str(e))}", severity="error")
 
-    def _render_table(self) -> None:
+    def _render_table(self, adversaries: list[Adversary]) -> None:
+        self._displayed = adversaries
         table = self.query_one("#adversaries-table", DataTable)
         table.clear()
-        for adv in self._adversaries:
+        for adv in self._displayed:
             tags = ", ".join(adv.tags[:3]) if adv.tags else "-"
             table.add_row(
                 adv.adversary_id[:12],
@@ -153,12 +163,39 @@ class AdversariesScreen(BaseScreen):
                 str(len(adv.atomic_ordering)),
                 tags,
             )
+        count_label = self.query_one("#result-count", Static)
+        total = len(self._adversaries)
+        shown = len(self._displayed)
+        if shown < total:
+            count_label.update(f"[dim]Mostrando {shown} de {total} adversarios[/]")
+        else:
+            count_label.update(f"[dim]{total} adversarios[/]")
+
+    def on_input_changed(self, event: Input.Changed) -> None:
+        if event.input.id == "search-input":
+            if self._search_timer is not None:
+                self._search_timer.stop()
+            self._search_timer = self.set_timer(SEARCH_DEBOUNCE_S, self._do_search)
+
+    def _do_search(self) -> None:
+        q = self.query_one("#search-input", Input).value.strip().lower()
+        if not q:
+            self._render_table(self._adversaries)
+        else:
+            filtered = [
+                adv for adv in self._adversaries
+                if q in adv.name.lower()
+                or q in adv.adversary_id.lower()
+                or any(q in tag.lower() for tag in adv.tags)
+                or q in (adv.description or "").lower()
+            ]
+            self._render_table(filtered)
 
     def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
         if event.row_key is not None:
             idx = event.cursor_row
-            if 0 <= idx < len(self._adversaries):
-                self._show_detail(self._adversaries[idx])
+            if 0 <= idx < len(self._displayed):
+                self._show_detail(self._displayed[idx])
 
     def _show_detail(self, adv: Adversary) -> None:
         detail = self.query_one("#adversary-detail", Static)

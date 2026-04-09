@@ -18,11 +18,29 @@ BASE = "http://testserver"
 
 class TestHealthCheck:
     @pytest.mark.asyncio
-    async def test_health_200_returns_true(self):
+    async def test_health_200_returns_connected(self):
         async with respx.mock(base_url=BASE) as mock:
             mock.get("/api/v2/health").mock(return_value=Response(200))
             client = CalderaClient(BASE, "key")
-            assert await client.health_check() is True
+            assert await client.health_check() == "connected"
+            await client.close()
+
+    @pytest.mark.asyncio
+    async def test_health_401_returns_auth_error(self):
+        """401 en /health → auth_error (API key incorrecta)."""
+        async with respx.mock(base_url=BASE) as mock:
+            mock.get("/api/v2/health").mock(return_value=Response(401, text="Unauthorized"))
+            client = CalderaClient(BASE, "key")
+            assert await client.health_check() == "auth_error"
+            await client.close()
+
+    @pytest.mark.asyncio
+    async def test_health_403_returns_auth_error(self):
+        """403 en /health → auth_error."""
+        async with respx.mock(base_url=BASE) as mock:
+            mock.get("/api/v2/health").mock(return_value=Response(403, text="Forbidden"))
+            client = CalderaClient(BASE, "key")
+            assert await client.health_check() == "auth_error"
             await client.close()
 
     @pytest.mark.asyncio
@@ -32,27 +50,37 @@ class TestHealthCheck:
             mock.get("/api/v2/health").mock(return_value=Response(404))
             mock.get("/api/v2/agents").mock(return_value=Response(200, json=[]))
             client = CalderaClient(BASE, "key")
-            assert await client.health_check() is True
+            assert await client.health_check() == "connected"
+            await client.close()
+
+    @pytest.mark.asyncio
+    async def test_health_fallback_agents_401_returns_auth_error(self):
+        """Si /health es 404 y /agents devuelve 401 → auth_error."""
+        async with respx.mock(base_url=BASE) as mock:
+            mock.get("/api/v2/health").mock(return_value=Response(404))
+            mock.get("/api/v2/agents").mock(return_value=Response(401, text="Unauthorized"))
+            client = CalderaClient(BASE, "key")
+            assert await client.health_check() == "auth_error"
             await client.close()
 
     @pytest.mark.asyncio
     async def test_health_500_fallback_agents_falla(self):
-        """Si /health devuelve 500 y /agents también falla, devuelve False."""
+        """Si /health devuelve 500 y /agents también falla, devuelve offline."""
         async with respx.mock(base_url=BASE) as mock:
             mock.get("/api/v2/health").mock(return_value=Response(500))
             mock.get("/api/v2/agents").mock(return_value=Response(500))
             client = CalderaClient(BASE, "key")
-            assert await client.health_check() is False
+            assert await client.health_check() == "offline"
             await client.close()
 
     @pytest.mark.asyncio
-    async def test_health_connect_error_returns_false(self):
+    async def test_health_connect_error_returns_offline(self):
         async with respx.mock(base_url=BASE) as mock:
             mock.get("/api/v2/health").mock(
                 side_effect=ConnectError("Connection refused", request=Request("GET", f"{BASE}/api/v2/health"))
             )
             client = CalderaClient(BASE, "key")
-            assert await client.health_check() is False
+            assert await client.health_check() == "offline"
             await client.close()
 
 

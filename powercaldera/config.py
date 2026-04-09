@@ -13,10 +13,12 @@ import yaml
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_SERVER_URL = "http://localhost:8888"
+
 
 @dataclass
 class Config:
-    server_url: str = "http://localhost:8888"
+    server_url: str = DEFAULT_SERVER_URL
     api_key: str = ""
     refresh_interval: int = 30
     templates_dir: str | None = None
@@ -32,7 +34,7 @@ class Config:
                 if isinstance(raw, dict):
                     server = raw.get("server", {})
                     settings = raw.get("settings", {})
-                    data["server_url"] = server.get("url", cls.server_url)
+                    data["server_url"] = server.get("url", DEFAULT_SERVER_URL)
                     data["api_key"] = server.get("api_key", "")
                     data["refresh_interval"] = settings.get("refresh_interval", 30)
                     data["templates_dir"] = settings.get("templates_dir")
@@ -62,7 +64,7 @@ class Config:
                     file=sys.stderr,
                 )
 
-        data["server_url"] = os.environ.get("CALDERA_URL", data.get("server_url", cls.server_url))
+        data["server_url"] = os.environ.get("CALDERA_URL", data.get("server_url", DEFAULT_SERVER_URL))
         data["api_key"] = os.environ.get("CALDERA_API_KEY", data.get("api_key", ""))
         data["log_level"] = os.environ.get("CALDERA_LOG_LEVEL", data.get("log_level", "INFO"))
 

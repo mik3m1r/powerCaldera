@@ -77,7 +77,7 @@ class PowerCalderaApp(App):
         super().__init__()
         self.config = config
         self.client = CalderaClient(config.server_url, config.api_key)
-        self.abilities_cache = AbilitiesCache()
+        self.abilities_cache = AbilitiesCache(_ttl=float(config.refresh_interval))
 
     async def get_abilities(self, force: bool = False) -> list[Ability]:
         """Retorna habilidades desde cache o API."""
@@ -100,10 +100,12 @@ class PowerCalderaApp(App):
         self.switch_mode("dashboard")
         # Pre-fetch en background — solo si hay conexión
         try:
-            connected = await self.client.health_check()
-            if connected:
+            state = await self.client.health_check()
+            if state == "connected":
                 logger.info("Conectado a Caldera en %s", self.config.server_url)
                 await self.get_abilities()
+            elif state == "auth_error":
+                logger.warning("Error de autenticación con Caldera en %s — verifica la API key", self.config.server_url)
             else:
                 logger.warning("Sin conexión a Caldera en %s al iniciar", self.config.server_url)
         except Exception:

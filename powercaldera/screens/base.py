@@ -20,12 +20,21 @@ class BaseScreen(Screen):
 
     async def _check_connection(self) -> bool:
         """Health check + notificación si falla. Retorna True si conectado."""
-        connected = await self.app.client.health_check()
-        if not connected:
+        state = await self.app.client.health_check()
+        if state == "connected":
+            return True
+        if state == "auth_error":
+            logger.warning("%s: error de autenticación con Caldera", self.__class__.__name__)
+            self.notify(
+                "Error de autenticación. Verifica tu API key en la configuración.",
+                severity="error",
+                timeout=8,
+            )
+        else:
             logger.warning("%s: sin conexión a Caldera", self.__class__.__name__)
             self.notify(
                 "Sin conexión con Caldera. Verifica URL y API key ([r] para reintentar).",
                 severity="warning",
                 timeout=8,
             )
-        return connected
+        return False

@@ -152,9 +152,11 @@ class AbilitiesScreen(BaseScreen):
         yield Static("[bold #00ff41]--- Habilidades ---[/]", classes="section-title")
         yield Input(placeholder="Buscar por nombre, táctica o técnica...", id="search-input")
         yield Static("", id="result-count")
-        with Horizontal(classes="split-horizontal"):
-            yield DataTable(id="abilities-table")
-            yield Static("Selecciona una habilidad para ver detalles", id="ability-detail")
+        with Horizontal(classes="content-area"):
+            with Vertical(classes="pane-left"):
+                yield DataTable(id="abilities-table")
+            with Vertical(classes="pane-right"):
+                yield Static("Selecciona una habilidad para ver detalles", id="ability-detail")
         yield StatusBar()
         yield Footer()
 
@@ -179,7 +181,7 @@ class AbilitiesScreen(BaseScreen):
         table = self.query_one("#abilities-table", DataTable)
         table.clear()
         for ab in self._displayed:
-            platforms = ", ".join(set(e.platform for e in ab.executors)) or "-"
+            platforms = ", ".join(sorted(set(e.platform for e in ab.executors))) or "-"
             table.add_row(
                 ab.ability_id[:12],
                 truncate(ab.name, 40),
@@ -221,15 +223,15 @@ class AbilitiesScreen(BaseScreen):
         detail = self.query_one("#ability-detail", Static)
         executors_text = ""
         for ex in ab.executors:
-            executors_text += f"\n  [{ex.platform}] {ex.name}: {ex.command[:100]}"
+            executors_text += f"\n  [{ex.platform}] {ex.name}: {escape(ex.command[:100])}"
 
         detail.update(
-            f"[bold #00ff41]{ab.name}[/]\n\n"
-            f"[bold]ID:[/] {ab.ability_id}\n"
-            f"[bold]Táctica:[/] {ab.tactic}\n"
-            f"[bold]Técnica:[/] {ab.technique_id} — {ab.technique_name}\n"
-            f"[bold]Descripción:[/] {ab.description or '-'}\n"
-            f"[bold]Plugin:[/] {ab.plugin or '-'}\n"
+            f"[bold #00ff41]{escape(ab.name)}[/]\n\n"
+            f"[bold]ID:[/] {escape(ab.ability_id)}\n"
+            f"[bold]Táctica:[/] {escape(ab.tactic)}\n"
+            f"[bold]Técnica:[/] {escape(ab.technique_id)} — {escape(ab.technique_name)}\n"
+            f"[bold]Descripción:[/] {escape(ab.description or '-')}\n"
+            f"[bold]Plugin:[/] {escape(ab.plugin or '-')}\n"
             f"[bold]Ejecutores:[/]{executors_text or ' (ninguno)'}"
         )
 

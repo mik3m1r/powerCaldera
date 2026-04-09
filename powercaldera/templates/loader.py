@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import uuid
+from collections.abc import Callable
 from pathlib import Path
 
 from pydantic import ValidationError
@@ -94,18 +95,31 @@ class TemplateLoader:
 
     @staticmethod
     async def deploy(
-        template: TemplateModel, client: CalderaClient
+        template: TemplateModel,
+        client: CalderaClient,
+        on_progress: Callable[[str], None] | None = None,
     ) -> tuple[Adversary, list[str]]:
         """Despliega una plantilla: crea abilities y adversario.
+
+        Args:
+            template:    La plantilla a desplegar.
+            client:      Cliente de la API de Caldera.
+            on_progress: Callback opcional llamado en cada paso con un mensaje descriptivo.
 
         Returns:
             (adversary_creado, lista_de_ability_ids_creados)
         """
         created_ability_ids: list[str] = []
-        logger.info("Deploying template '%s' (%d abilities)", template.name, len(template.abilities))
+        total = len(template.abilities)
+        logger.info("Deploying template '%s' (%d abilities)", template.name, total)
+
+        def _progress(msg: str) -> None:
+            if on_progress:
+                on_progress(msg)
 
         try:
-            for ability in template.abilities:
+            for i, ability in enumerate(template.abilities, 1):
+                _progress(f"Creando habilidad {i}/{total}: {ability.name}…")
                 aid = _generate_id("pc-ab")
                 req = CreateAbilityRequest(
                     ability_id=aid,
@@ -119,6 +133,7 @@ class TemplateLoader:
                 await client.create_ability(req)
                 created_ability_ids.append(aid)
 
+            _progress(f"Creando adversario '{template.name}'…")
             adv_req = CreateAdversaryRequest(
                 adversary_id=_generate_id("pc-adv"),
                 name=template.name,
@@ -127,13 +142,20 @@ class TemplateLoader:
                 tags=template.tags,
             )
             adversary = await client.create_adversary(adv_req)
+            _progress(f"✓ Despliegue completado: '{adversary.name}' con {len(created_ability_ids)} habilidades.")
             return adversary, created_ability_ids
 
         except Exception:
             logger.error("Deploy failed for '%s', rolling back %d abilities", template.name, len(created_ability_ids), exc_info=True)
+            if created_ability_ids:
+                _progress(f"Error — revirtiendo {len(created_ability_ids)} habilidades creadas…")
+            rollback_errors = []
             for aid in created_ability_ids:
                 try:
                     await client.delete_ability(aid)
-                except Exception:
+                except Exception as rb_err:
                     logger.warning("Rollback: failed to delete ability %s", aid, exc_info=True)
+                    rollback_errors.append(str(rb_err))
+            if rollback_errors:
+                _progress(f"⚠ Rollback parcial — {len(rollback_errors)} habilidades no eliminadas.")
             raise

@@ -5,7 +5,9 @@ from __future__ import annotations
 import logging
 
 from textual.app import ComposeResult
+from textual.containers import Vertical
 from textual.markup import escape
+from textual.timer import Timer
 from textual.widgets import DataTable, Static, Footer
 
 from ..widgets.header_bar import HeaderBar
@@ -19,13 +21,19 @@ class DashboardScreen(BaseScreen):
 
     BINDINGS = [("r", "refresh", "Refrescar")]
 
+    def __init__(self) -> None:
+        super().__init__()
+        self._refresh_timer: Timer | None = None
+
     def compose(self) -> ComposeResult:
         yield HeaderBar()
         yield Static("[bold #00ff41]--- Dashboard ---[/]", classes="section-title")
-        yield Static("[bold]Agentes Conectados[/]")
-        yield DataTable(id="agents-table")
-        yield Static("[bold]Operaciones[/]")
-        yield DataTable(id="operations-table")
+        with Vertical(classes="dashboard-section"):
+            yield Static("[bold]Agentes Conectados[/]", classes="dashboard-label")
+            yield DataTable(id="agents-table")
+        with Vertical(classes="dashboard-section"):
+            yield Static("[bold]Operaciones[/]", classes="dashboard-label")
+            yield DataTable(id="operations-table")
         yield StatusBar()
         yield Footer()
 
@@ -38,16 +46,21 @@ class DashboardScreen(BaseScreen):
 
         self.load_data()
 
+        # Auto-refresh wired to config.refresh_interval
+        interval = float(getattr(getattr(self.app, "config", None), "refresh_interval", 30))
+        self._refresh_timer = self.set_interval(interval, self.load_data)
+
     async def _load_data(self) -> None:
         try:
             status_bar = self.query_one(StatusBar)
             client = self.app.client
-            connected = await client.health_check()
-            agents = await client.list_agents() if connected else []
-            operations = await client.list_operations() if connected else []
+            state = await client.health_check()
+            is_connected = state == "connected"
+            agents = await client.list_agents() if is_connected else []
+            operations = await client.list_operations() if is_connected else []
 
             status_bar.set_status(
-                connected=connected,
+                connected=state,
                 server_url=self.app.config.server_url,
                 agents=len(agents),
             )

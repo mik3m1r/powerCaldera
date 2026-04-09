@@ -62,7 +62,11 @@ class TemplateAbility(BaseModel):
     @field_validator("technique_id")
     @classmethod
     def validate_technique_id(cls, v):
-        if not re.match(r"^T\d{4}(\.\d{3})?$", v):
+        if not v.startswith("T"):
+            raise ValueError(
+                "technique_id debe empezar con 'T' (ej: T1082, T1003.005)"
+            )
+        if not re.match(r"^T\d+(\.\d+)?$", v):
             raise ValueError(
                 "technique_id debe tener formato T####(.###) (ej: T1082, T1003.005)"
             )

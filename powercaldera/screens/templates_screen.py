@@ -8,7 +8,6 @@ from pathlib import Path
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.markup import escape
-from textual.screen import Screen
 from textual.widgets import (
     Button, DataTable, Footer, Input, RichLog, Static, TabbedContent, TabPane, TextArea,
 )
@@ -17,11 +16,12 @@ from ..templates.loader import TemplateLoader
 from ..templates.models import TemplateModel
 from ..widgets.header_bar import HeaderBar
 from ..widgets.status_bar import StatusBar
+from .base import BaseScreen
 
 logger = logging.getLogger(__name__)
 
 
-class TemplatesScreen(Screen):
+class TemplatesScreen(BaseScreen):
 
     BINDINGS = [
         ("r", "refresh", "Refrescar"),
@@ -36,51 +36,47 @@ class TemplatesScreen(Screen):
 
     def compose(self) -> ComposeResult:
         yield HeaderBar()
-        yield Static("[bold #00ff41]--- Plantillas de Adversarios ---[/]", classes="section-title")
-        with TabbedContent():
+        yield Static("[bold #00ff41]--- Templates ---[/]", classes="section-title")
+        with TabbedContent(initial="tab-builtin"):
             with TabPane("Predefinidas", id="tab-builtin"):
-                with Horizontal(classes="split-horizontal"):
-                    with Vertical():
+                with Horizontal(classes="content-area"):
+                    with Vertical(classes="pane-left"):
                         yield DataTable(id="builtin-table")
-                        yield Button(
-                            "Desplegar en Caldera",
-                            variant="success",
-                            id="btn-deploy-builtin",
-                        )
-                    yield Static(
-                        "Selecciona una plantilla para preview",
-                        id="builtin-preview",
-                    )
+                        with Horizontal(classes="button-row"):
+                            yield Button("Desplegar", variant="success", id="btn-deploy-builtin")
+                    with Vertical(classes="pane-right"):
+                        yield Static("Selecciona una plantilla para ver el detalle", id="builtin-preview")
             with TabPane("Importar JSON", id="tab-import"):
-                with Horizontal(classes="split-horizontal"):
-                    with Vertical():
-                        yield Static("[bold]Pegar JSON de plantilla:[/]")
-                        yield TextArea(id="json-input", language="json")
-                        yield Static("[bold]O cargar desde archivo:[/]")
-                        yield Input(
-                            placeholder="Ruta al archivo .json",
-                            id="file-path-input",
-                        )
-                        with Horizontal():
-                            yield Button("Validar", id="btn-validate")
-                            yield Button("Cargar Archivo", id="btn-load-file")
-                            yield Button(
-                                "Desplegar en Caldera",
-                                variant="success",
-                                id="btn-deploy-import",
-                            )
-                    yield Vertical(
-                        Static("[bold]Preview:[/]", id="import-preview-title"),
-                        RichLog(id="import-preview-log", wrap=True),
-                        id="preview-panel",
-                    )
+                with Vertical(classes="content-area"):
+                    with Horizontal(classes="button-row"):
+                        yield Input(placeholder="Ruta al archivo .json (opcional)", id="file-path-input")
+                        yield Button("Cargar archivo", id="btn-load-file")
+                    yield TextArea(id="json-input")
+                    with Horizontal(classes="button-row"):
+                        yield Button("Validar", variant="primary", id="btn-validate")
+                        yield Button("Desplegar", variant="success", id="btn-deploy-import")
+                    yield RichLog(id="import-preview-log", markup=True)
         yield StatusBar()
         yield Footer()
 
     def on_mount(self) -> None:
+        # Inicializar loader con templates_dir desde config si está configurado
+        config = getattr(self.app, "config", None)
+        if config is not None:
+            td = getattr(config, "templates_dir", None)
+            if td:
+                self._loader = TemplateLoader(extra_dirs=[Path(td)])
+        # Defer table setup until after TabbedContent has fully mounted its children
+        self.call_after_refresh(self._init_builtin_table)
+
+    def _init_builtin_table(self) -> None:
         table = self.query_one("#builtin-table", DataTable)
         table.add_columns("Archivo", "Nombre", "Habilidades", "Tácticas")
         table.cursor_type = "row"
+        self._load_builtin()
+
+    async def _load_data(self) -> None:
+        """Recarga las plantillas builtin (llamado por load_data / acción refresh)."""
         self._load_builtin()
 
     def _load_builtin(self) -> None:
@@ -202,10 +198,25 @@ class TemplatesScreen(Screen):
             self.notify(f"No hay plantilla {source} seleccionada", severity="warning")
             return
 
+        # Intentar usar el log del panel de importar para progreso detallado
+        deploy_log: RichLog | None = None
+        try:
+            deploy_log = self.query_one("#import-preview-log", RichLog)
+            deploy_log.clear()
+            deploy_log.write(f"[bold #00ff41]Desplegando '{escape(tpl.name)}'…[/]\n")
+        except Exception:
+            pass  # En la pestaña builtin no hay log
+
         self.notify(f"Desplegando '{tpl.name}'...", severity="information")
+
+        def on_progress(msg: str) -> None:
+            logger.info("Deploy progress: %s", msg)
+            if deploy_log is not None:
+                deploy_log.write(f"  {escape(msg)}")
+
         try:
             adversary, ability_ids = await TemplateLoader.deploy(
-                tpl, self.app.client
+                tpl, self.app.client, on_progress=on_progress
             )
             self.app.invalidate_cache()
             logger.info("Plantilla '%s' desplegada: adversario '%s' con %d habilidades", tpl.name, adversary.name, len(ability_ids))
@@ -215,7 +226,9 @@ class TemplatesScreen(Screen):
             )
         except Exception as e:
             logger.error("Error al desplegar plantilla '%s': %s", tpl.name, e, exc_info=True)
+            if deploy_log is not None:
+                deploy_log.write(f"\n[red]✗ Error: {escape(str(e))}[/]")
             self.notify(f"Error al desplegar: {escape(str(e))}", severity="error")
 
     def action_refresh(self) -> None:
-        self._load_builtin()
+        self.load_data()

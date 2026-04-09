@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class CalderaBaseModel(BaseModel):
@@ -16,8 +16,13 @@ class CalderaBaseModel(BaseModel):
 class Executor(CalderaBaseModel):
     name: str = ""
     platform: str = ""
-    command: str = ""
+    command: Optional[str] = ""
     payloads: list[str] = []
+
+    @field_validator("command", mode="before")
+    @classmethod
+    def coerce_none_command(cls, v: Any) -> str:
+        return v if isinstance(v, str) else ""
 
 
 class Ability(CalderaBaseModel):

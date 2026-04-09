@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 
@@ -58,20 +58,34 @@ class CalderaClient:
 
     # --- Health ---
 
-    async def health_check(self) -> bool:
+    async def health_check(self) -> Literal["connected", "auth_error", "offline"]:
+        """Comprueba conectividad con Caldera.
+
+        Returns:
+            "connected"  — servidor responde OK
+            "auth_error" — servidor accesible pero API key inválida (401/403)
+            "offline"    — servidor inaccesible o error de red
+        """
         try:
             resp = await self._client.get("/api/v2/health")
             if resp.status_code == 200:
                 logger.debug("Health check OK (200)")
-                return True
+                return "connected"
+            if resp.status_code in (401, 403):
+                logger.warning("Health check auth error (%d)", resp.status_code)
+                return "auth_error"
+            # Otro código (404, 5xx) → intentar /agents como fallback
             logger.debug("Health check /health returned %d, trying /agents fallback", resp.status_code)
             resp2 = await self._client.get("/api/v2/agents")
-            result = resp2.status_code < 400
-            logger.debug("Health check fallback /agents: %d → %s", resp2.status_code, result)
-            return result
+            if resp2.status_code == 200:
+                return "connected"
+            if resp2.status_code in (401, 403):
+                return "auth_error"
+            logger.debug("Health check fallback /agents: %d → offline", resp2.status_code)
+            return "offline"
         except Exception as e:
             logger.warning("Health check failed: %s", e)
-            return False
+            return "offline"
 
     # --- Agents ---
 

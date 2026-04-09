@@ -1,10 +1,14 @@
 /* powerCaldera TUI Theme */
 
+/* ── Root ─────────────────────────────────────────────────── */
 Screen {
     background: $surface;
+    layout: vertical;
+    height: 100%;
+    overflow: hidden;
 }
 
-/* Header bar */
+/* ── Header / Status ─────────────────────────────────────── */
 #header-bar {
     dock: top;
     height: 3;
@@ -22,7 +26,6 @@ Screen {
     color: #888;
 }
 
-/* Status bar */
 #status-bar {
     dock: bottom;
     height: 1;
@@ -39,10 +42,60 @@ Screen {
     color: #ff4444;
 }
 
-/* DataTable styling */
+/* ── Section title ───────────────────────────────────────── */
+.section-title {
+    height: 1;
+    text-style: bold;
+    color: #00ff41;
+    margin: 0;
+}
+
+/* ── Result count label ──────────────────────────────────── */
+#result-count {
+    height: 1;
+    color: #888;
+}
+
+/* ── Content area: takes all remaining vertical space ───── */
+/* Used in abilities, adversaries, operations, templates */
+.content-area {
+    height: 1fr;
+    layout: horizontal;
+}
+
+/* ── Left pane (list + optional buttons) ────────────────── */
+.pane-left {
+    width: 60%;
+    layout: vertical;
+    height: 100%;
+}
+
+/* ── Right pane (detail / preview) ──────────────────────── */
+.pane-right {
+    width: 40%;
+    layout: vertical;
+    height: 100%;
+    padding: 1 2;
+    overflow-y: auto;
+    border-left: solid #333;
+}
+
+/* ── Dashboard: two equal tables stacked ────────────────── */
+.dashboard-section {
+    height: 1fr;
+    layout: vertical;
+}
+
+.dashboard-label {
+    height: 1;
+    text-style: bold;
+    color: #00ff41;
+}
+
+/* ── DataTable ───────────────────────────────────────────── */
 DataTable {
     height: 1fr;
-    margin: 1 0;
+    margin: 0;
 }
 
 DataTable > .datatable--header {
@@ -56,68 +109,79 @@ DataTable > .datatable--cursor {
     color: white;
 }
 
-/* ListView */
-ListView {
-    width: 40;
-    border-right: solid #333;
-}
-
-ListView > .list-item--highlight {
-    background: #0f3460;
-}
-
-/* Input */
+/* ── Input ───────────────────────────────────────────────── */
 Input {
-    margin: 1 0;
+    height: 3;
+    margin: 0;
 }
 
 Input:focus {
     border: tall #00ff41;
 }
 
-/* TextArea */
+/* ── TextArea ────────────────────────────────────────────── */
 TextArea {
     height: 1fr;
-    margin: 1 0;
+    margin: 0;
 }
 
 TextArea:focus {
     border: tall #00ff41;
 }
 
-/* Buttons */
+/* ── RichLog ─────────────────────────────────────────────── */
+RichLog {
+    height: 1fr;
+}
+
+/* ── Buttons ─────────────────────────────────────────────── */
 Button {
     margin: 0 1;
 }
 
-Button.primary {
-    background: #0f3460;
-    color: white;
+.button-row {
+    height: 3;
+    layout: horizontal;
+    align: left middle;
 }
 
-Button.primary:hover {
-    background: #1a5276;
+/* ── Operations panel ────────────────────────────────────── */
+#preview-panel {
+    width: 40%;
+    layout: vertical;
+    height: 100%;
+    padding: 1 2;
+    overflow-y: auto;
+    border-left: solid #333;
 }
 
-Button.success {
-    background: #1e6f30;
-    color: white;
+#op-detail {
+    height: auto;
+    margin-bottom: 1;
 }
 
-Button.success:hover {
-    background: #278f3e;
+/* ── Templates ───────────────────────────────────────────── */
+TabbedContent {
+    height: 1fr;
 }
 
-Button.danger {
-    background: #8b0000;
-    color: white;
+TabbedContent ContentSwitcher {
+    height: 1fr;
 }
 
-Button.danger:hover {
-    background: #a50000;
+TabPane {
+    padding: 0;
+    height: 100%;
+    layout: vertical;
 }
 
-/* Modal screens */
+#builtin-preview {
+    height: 100%;
+    padding: 1 2;
+    overflow-y: auto;
+}
+
+/* ── Modal screens ───────────────────────────────────────── */
 ModalScreen {
     align: center middle;
 }
@@ -130,57 +194,25 @@ ModalScreen {
     padding: 1 2;
 }
 
-#modal-dialog .modal-title {
-    text-style: bold;
-    color: #00ff41;
-    margin-bottom: 1;
+/* ── ListView ────────────────────────────────────────────── */
+ListView {
+    width: 40;
+    border-right: solid #333;
 }
 
-/* Tabs */
-TabbedContent {
-    height: 1fr;
+ListView > .list-item--highlight {
+    background: #0f3460;
 }
 
-TabPane {
-    padding: 1;
-}
-
-/* Preview panel */
-#preview-panel {
-    width: 1fr;
-    padding: 1 2;
-    overflow-y: auto;
-}
-
-/* Section headers */
-.section-title {
-    text-style: bold;
-    color: #00ff41;
-    margin: 1 0 0 0;
-}
-
-/* Tag labels */
+/* ── Tags / Error / Success ──────────────────────────────── */
 .tag {
     color: #ffd700;
 }
 
-/* Error text */
 .error-text {
     color: #ff4444;
 }
 
-/* Success text */
 .success-text {
     color: #00ff41;
-}
-
-/* Container layouts */
-.split-horizontal {
-    layout: horizontal;
-    height: 1fr;
-}
-
-.split-vertical {
-    layout: vertical;
-    height: 1fr;
 }
